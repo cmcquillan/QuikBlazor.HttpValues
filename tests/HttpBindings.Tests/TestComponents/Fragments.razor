@@ -1,0 +1,38 @@
+﻿@code {
+    public static RenderFragment<SimpleData> Simple = (data) =>
+    {
+        return @<div id="data">
+            <h1>@data.Id</h1>
+            <h2>@data.Name</h2>
+            <h3>@data.Description</h3>
+        </div>;
+    };
+
+    public static RenderFragment ErrorBasic = (__builder) =>
+    {
+        <div id="error">Error State</div>
+    };
+
+    public static RenderFragment Error404 = (__builder) =>
+    {
+        <ErrorTemplateSelector>
+            <Http404>
+                <div id="error">Error 404</div>
+            </Http404>
+        </ErrorTemplateSelector>
+    };
+
+    public static RenderFragment Timeout = (__builder) =>
+    {
+        <ErrorTemplateSelector>
+            <Timeout>
+                <div id="error">Timeout</div>
+            </Timeout>
+        </ErrorTemplateSelector>
+    };
+
+    public static RenderFragment Loading = (__builder) =>
+    {
+        <div id="loading">Loading</div>
+    };
+}

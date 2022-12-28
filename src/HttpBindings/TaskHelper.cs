@@ -12,11 +12,7 @@ namespace HttpBindings
         {
             if (debounceMs.HasValue && !cancellationToken.IsCancellationRequested)
             {
-                try
-                {
                     await Task.Delay(debounceMs.Value, cancellationToken);
-                }
-                catch { }
             }
 
             if (cancellationToken.IsCancellationRequested)

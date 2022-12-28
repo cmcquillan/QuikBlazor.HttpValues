@@ -1,29 +1,11 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 
 namespace HttpBindings;
-
-public enum HttpMethod
-{
-    Get,
-    Post,
-    Put,
-    Delete,
-    Head,
-    Options,
-}
-
-public enum CascadingHttpValueErrorState
-{
-    None,
-    HttpError,
-    Timeout
-}
 
 public abstract partial class CascadingHttpValueBase<TValue> : ComponentBase
 {
@@ -36,12 +18,13 @@ public abstract partial class CascadingHttpValueBase<TValue> : ComponentBase
     };
     private Task<HttpResponseMessage?>? _responseTask;
     private CancellationTokenSource? _cancellationTokenSource;
+    private CancellationTokenSource? _previousTokenSource;
 
 
     [Inject]
     private IHttpClientFactory? ClientFactory { get; set; }
 
-    protected CascadingHttpValueErrorState ErrorState { get; set; } = CascadingHttpValueErrorState.None;
+    public CascadingHttpValueErrorState ErrorState { get; private set; } = CascadingHttpValueErrorState.None;
 
     [Parameter]
     public string? HttpClientName { get; set; }
@@ -126,6 +109,8 @@ public abstract partial class CascadingHttpValueBase<TValue> : ComponentBase
         {
             if (_cancellationTokenSource is not null)
             {
+                Debug.WriteLine("Cancelling current token");
+                _previousTokenSource = _cancellationTokenSource;
                 _cancellationTokenSource.Cancel();
                 _cancellationTokenSource = null;
             }
@@ -138,6 +123,7 @@ public abstract partial class CascadingHttpValueBase<TValue> : ComponentBase
 
         if (Client is not null)
         {
+            Debug.WriteLine("Constructing cancellation token from {0}ms", TimeoutMilliseconds);
             _cancellationTokenSource = TimeoutMilliseconds.HasValue
                 ? new CancellationTokenSource(TimeoutMilliseconds.Value)
                 : new CancellationTokenSource();
@@ -157,10 +143,10 @@ public abstract partial class CascadingHttpValueBase<TValue> : ComponentBase
                     request.Content = GetRequestBody();
                 }
 
-                return Client.SendAsync(request);
+                return Client.SendAsync(request, token);
             }, DebounceMilliseconds, token).ContinueWith(async (httpTask) =>
             {
-                if (!httpTask.IsCanceled)
+                if (!httpTask.IsCanceled && !token.IsCancellationRequested)
                 {
                     var response = await httpTask;
                     if (response is not null)
@@ -181,9 +167,10 @@ public abstract partial class CascadingHttpValueBase<TValue> : ComponentBase
                     }
                 }
 
-                if (httpTask.IsCanceled)
+                if (httpTask.IsCanceled || token.IsCancellationRequested)
                 {
                     ErrorState = CascadingHttpValueErrorState.Timeout;
+                    StateHasChanged();
                 }
 
                 if (httpTask.IsFaulted)

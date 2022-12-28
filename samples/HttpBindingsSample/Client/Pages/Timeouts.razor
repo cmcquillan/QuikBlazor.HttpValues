@@ -1,0 +1,28 @@
+﻿@page "/timeouts"
+
+<h3>Timeouts</h3>
+
+<section>
+    <CascadingHttpValue Context="cake"
+                        TValue="Cake" 
+                        TimeoutMilliseconds="2000"
+                        Url="https://localhost:7077/timeouts/10000">
+        <ErrorTemplate>
+            <ErrorTemplateSelector>
+                <Timeout>
+                    Request Timed Out
+                </Timeout>
+                <Default>
+                    Unknown Error
+                </Default>
+            </ErrorTemplateSelector>
+        </ErrorTemplate>
+        <LoadingContent>
+            Loading...
+        </LoadingContent>
+        <ChildContent>
+            Valid Response
+        </ChildContent>
+    </CascadingHttpValue>
+</section>
+

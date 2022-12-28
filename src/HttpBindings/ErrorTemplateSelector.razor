@@ -1,0 +1,115 @@
+﻿@using System.Net
+
+@if (HttpResponse is not null && _errorRender is not null)
+{
+    @_errorRender(HttpResponse)
+}
+
+@code {
+    [CascadingParameter(Name = "__httpErrorState")]
+    protected CascadingHttpValueErrorState ErrorState { get; set; }
+
+    [CascadingParameter(Name = "__httpResponse")]
+    protected HttpResponseMessage? HttpResponse { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Http400 { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Http401 { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Http403 { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Http404 { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Http405 { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Http408 { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Http409 { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Http415 { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Http417 { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Http429 { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Http500 { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Http501 { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Http502 { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Http504 { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Timeout { get; set; }
+
+    [Parameter]
+    public RenderFragment<HttpResponseMessage>? Default { get; set; }
+
+
+    private RenderFragment<HttpResponseMessage>? _errorRender = null;
+
+    protected override void OnParametersSet()
+    {
+        _errorRender = GetTemplate();
+    }
+
+    private RenderFragment<HttpResponseMessage>? GetTemplate()
+    {
+        if (HttpResponse is null)
+            return null;
+
+        if (ErrorState == CascadingHttpValueErrorState.Timeout && Timeout is not null)
+        {
+            return Timeout;
+        }
+
+        switch (HttpResponse.StatusCode)
+        {
+            case HttpStatusCode.BadRequest when Http400 is not null:
+                return Http400;
+            case HttpStatusCode.Unauthorized when Http401 is not null:
+                return Http401;
+            case HttpStatusCode.Forbidden when Http403 is not null:
+                return Http403;
+            case HttpStatusCode.NotFound when Http404 is not null:
+                return Http404;
+            case HttpStatusCode.MethodNotAllowed when Http405 is not null:
+                return Http405;
+            case HttpStatusCode.RequestTimeout when Http408 is not null:
+                return Http408;
+            case HttpStatusCode.Conflict when Http409 is not null:
+                return Http409;
+            case HttpStatusCode.UnsupportedMediaType when Http415 is not null:
+                return Http415;
+            case HttpStatusCode.ExpectationFailed when Http417 is not null:
+                return Http417;
+            case HttpStatusCode.TooManyRequests when Http429 is not null:
+                return Http429;
+            case HttpStatusCode.InternalServerError when Http500 is not null:
+                return Http500;
+            case HttpStatusCode.NotImplemented when Http501 is not null:
+                return Http501;
+            case HttpStatusCode.BadGateway when Http502 is not null:
+                return Http502;
+            case HttpStatusCode.GatewayTimeout when Http504 is not null:
+                return Http504;
+            default:
+                return Default;
+        };
+    }
+}

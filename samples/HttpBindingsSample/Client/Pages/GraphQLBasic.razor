@@ -1,0 +1,48 @@
+﻿@page "/graphql-basic"
+
+<section>
+    <label for="cake">Cake Lookup:</label>
+    <input name="cake" @bind="SearchValue" type="text" />
+    <button type="button" @onclick="UpdateValue">Lookup Cake</button>
+</section>
+
+<section>
+    <CascadingHttpValue TValue="GQL<CakeByIdResponse>"
+                        Context="response"
+                        Method="HttpBindings.HttpMethod.Post"
+                        ContentType="application/json"
+                        Url="https://localhost:7077/graphql">
+        <RequestBody>
+            { 
+                "query": "query getCake($cakeId: Int!) {\r\n  cakeById(id: $cakeId) {\r\n    id name origin description\r\n  }\r\n}",
+                "variables": { "cakeId": @SearchTerm }
+            }
+        </RequestBody>
+        <LoadingContent>
+            Loading...
+        </LoadingContent>
+        <ChildContent>
+            <div>
+                <h2>@response.Data.CakeById.Name</h2>
+                <strong>@response.Data.CakeById.Origin</strong>
+            </div>
+            <div>
+                <p>
+                    @response.Data.CakeById.Description
+                </p>
+            </div>
+        </ChildContent>
+    </CascadingHttpValue>
+</section>
+
+@code {
+
+    public string SearchTerm { get; set; } = "1";
+
+    public string SearchValue { get; set; } = "1";
+
+    private void UpdateValue()
+    {
+        SearchTerm = SearchValue.ToLower();
+    }
+}

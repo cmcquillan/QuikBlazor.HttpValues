@@ -1,0 +1,27 @@
+﻿@typeparam TValue
+
+@if (ErrorState is not CascadingHttpValueErrorState.None && ErrorTemplate is not null)
+{
+    <CascadingValue Value="ErrorResponse" Name="__httpResponse">
+        <ChildContent>
+            <CascadingValue Value="ErrorState" Name="__httpErrorState" ChildContent="ErrorTemplate" />
+        </ChildContent>
+    </CascadingValue>
+}
+else
+{
+    <CascadingValue Value="Result">
+        <ChildContent>
+            @if (ChildContent is not null && Result is not null)
+            {
+                @ChildContent(Result)
+            }
+
+            @if (_isLoading && LoadingContent is not null)
+            {
+                @LoadingContent
+            }
+        </ChildContent>
+    </CascadingValue>
+}
+

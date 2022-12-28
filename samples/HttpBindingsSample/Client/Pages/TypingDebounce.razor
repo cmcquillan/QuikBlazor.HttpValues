@@ -1,0 +1,61 @@
+﻿@page "/debounce"
+
+<section>
+    <label for="pokemon">Pokemon Lookup:</label>
+    <input name="pokemon" @bind="SearchValue" @bind:event="oninput" type="text" />
+</section>
+
+<section style="width: 50%; float: left;">
+    <CascadingHttpValue Context="cakes"
+                        TValue="Cake[]"
+                        DebounceMilliseconds="200"
+                        Url="https://localhost:7077/cakes?search={query}"
+                        query="@SearchValue?.ToLower()">
+        <ChildContent>
+            <div>
+                <h2>Found Cakes</h2>
+            </div>
+            <div>
+                @if (cakes is not null && cakes.Length > 0) 
+                {
+                    <ul>
+                        @foreach (var cake in cakes)
+                        {
+                            <li>
+                                <a href="#" @onclick="() => CakeId = cake.Id.ToString()" @onclick:preventDefault>
+                                    @cake.Id - @cake.Name
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </ChildContent>
+    </CascadingHttpValue>
+</section>
+<section style="width: 50%; float: right;">
+    @if (CakeId is not null)
+    {
+        <CascadingHttpValue Context="cake"
+                        TValue="Cake"
+                        Url="https://localhost:7077/cakes/{cakeId}"
+                        cakeId="@CakeId">
+            <ChildContent>
+                <div>
+                    <h2>@cake.Name</h2>
+                    <strong>@cake.Origin</strong>
+                </div>
+                <div>
+                    <p>
+                        @cake.Description
+                    </p>
+                </div>
+            </ChildContent>
+        </CascadingHttpValue>
+    }
+</section>
+
+@code {
+    public string SearchValue { get; set; } = "red";
+    public string? CakeId { get; set; } = null;
+}

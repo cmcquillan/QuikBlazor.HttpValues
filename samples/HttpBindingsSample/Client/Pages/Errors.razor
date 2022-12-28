@@ -1,0 +1,25 @@
+﻿@page "/errors"
+
+<h3>Errors</h3>
+
+<section>
+    <CascadingHttpValue Context="cake" TValue="Cake" Url="https://localhost:7077/errors/502">
+        <ErrorTemplate>
+            <ErrorTemplateSelector>
+                <Http502>
+                    Received a 502 error on response.
+                </Http502>
+                <Default>
+                    Unknown Error
+                </Default>
+            </ErrorTemplateSelector>
+        </ErrorTemplate>
+        <LoadingContent>
+            Loading...
+        </LoadingContent>
+        <ChildContent>
+            Valid Response
+        </ChildContent>
+    </CascadingHttpValue>
+</section>
+

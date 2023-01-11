@@ -1,0 +1,51 @@
+﻿@page "/event-based"
+
+<section>
+    <label for="cake">Cake Lookup:</label>
+    <input name="cake" @bind="SearchValue" type="text" />
+    <button type="button" @onclick="UpdateValue">Lookup Cake</button>
+    <HttpValue TValue="Cake"
+               Url="https://localhost:7077/cakes/{cakeId}"
+               @bind-Value="Cake"
+               @bind-Value:after="AfterAsync"
+               cakeId="@CakeId" />
+</section>
+
+<section>
+    @if (Cake is not null)
+    {
+        <div>
+            <h2>@Cake.Name</h2>
+            <strong>@Cake.Origin</strong>
+        </div>
+        <div>
+            <p>
+                @Cake.Description
+            </p>
+        </div>
+    }
+</section>
+
+@code {
+    public string CakeId { get; set; } = "1";
+
+    public string SearchValue { get; set; } = "1";
+
+    private void UpdateValue()
+    {
+        CakeId = SearchValue;
+        Console.WriteLine(Cake);
+    }
+
+    public Cake? Cake { get; set; }
+
+    public async Task AfterAsync()
+    {
+        Console.WriteLine("Hello");
+        await Task.CompletedTask;
+    }
+}
+
+@code {
+
+}

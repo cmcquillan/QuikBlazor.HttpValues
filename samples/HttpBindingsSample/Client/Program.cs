@@ -16,3 +16,7 @@ public record class Cake(int Id, string Name, string Origin, string Description)
 public record GQL<T>(T Data);
 
 public record class CakeByIdResponse(Cake CakeById);
+
+public record GraphQLQuery<T>(string Query, T Variables);
+
+public record CakeQuery(int CakeId);

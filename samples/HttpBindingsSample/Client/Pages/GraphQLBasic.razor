@@ -11,13 +11,8 @@
                         Context="response"
                         Method="HttpBindings.HttpMethod.Post"
                         ContentType="application/json"
-                        Url="https://localhost:7077/graphql">
-        <RequestBody>
-            { 
-                "query": "query getCake($cakeId: Int!) {\r\n  cakeById(id: $cakeId) {\r\n    id name origin description\r\n  }\r\n}",
-                "variables": { "cakeId": @SearchTerm }
-            }
-        </RequestBody>
+                        Url="https://localhost:7077/graphql"
+                        RequestBody="Query">
         <LoadingContent>
             Loading...
         </LoadingContent>
@@ -36,13 +31,23 @@
 </section>
 
 @code {
-
-    public string SearchTerm { get; set; } = "1";
+    public const string GraphQL = @"
+query getCake($cakeId: Int!) {
+    cakeById(id: $cakeId) {
+        id 
+        name 
+        origin 
+        description
+    }
+}";
 
     public string SearchValue { get; set; } = "1";
 
+    public GraphQLQuery<CakeQuery> Query { get; set; } = new GraphQLQuery<CakeQuery>(GraphQL, new CakeQuery(1));
+
     private void UpdateValue()
     {
-        SearchTerm = SearchValue.ToLower();
+        int.TryParse(SearchValue, out var cakeId);
+        Query = new GraphQLQuery<CakeQuery>(GraphQL, new CakeQuery(cakeId));
     }
 }

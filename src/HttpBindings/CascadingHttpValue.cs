@@ -10,5 +10,8 @@ namespace HttpBindings;
 
 public class CascadingHttpValue<TValue> : CascadingHttpValueBase<TValue>
 {
-
+    protected override Task OnNewValueAsync(TValue? value)
+    {
+        return Task.CompletedTask;
+    }
 }

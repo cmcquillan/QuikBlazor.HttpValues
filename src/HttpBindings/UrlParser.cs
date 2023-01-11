@@ -6,10 +6,20 @@ using System.Threading.Tasks;
 
 namespace HttpBindings;
 
+internal record class UrlKey(string Key, object? Value, UrlKey? Next)
+{
+    public UrlKey Push(string key, object? value)
+    {
+        return new UrlKey(key, value, this);
+    }
+}
+
 internal static class UrlParser
 {
-    internal static string ResolveUrlParameters(string urlFormat, IDictionary<string, object> attrs)
+    internal static (string, UrlKey) ResolveUrlParameters(string urlFormat, IDictionary<string, object> attrs)
     {
+        var key = new UrlKey("__url", urlFormat, null);
+
         StringBuilder newUrl = new(urlFormat.Length);
         int paramStartIx = -1;
         int paramEndIx = -1;
@@ -19,7 +29,6 @@ internal static class UrlParser
         {
             if (urlFormat[i] == '{')
             {
-
                 paramStartIx = i;
             }
             else if (urlFormat[i] == '}' && paramStartIx > -1)
@@ -35,6 +44,7 @@ internal static class UrlParser
 
                 attrs.TryGetValue(paramName, out var paramValue);
                 newUrl.Append(paramValue);
+                key = key.Push(paramName, paramValue);
 
                 lastParamEndIx = paramEndIx + 1;
                 paramStartIx = -1;
@@ -47,6 +57,6 @@ internal static class UrlParser
             newUrl.Append(urlFormat.AsSpan(lastParamEndIx, urlFormat.Length - lastParamEndIx));
         }
 
-        return newUrl.ToString();
+        return (newUrl.ToString(), key);
     }
 }

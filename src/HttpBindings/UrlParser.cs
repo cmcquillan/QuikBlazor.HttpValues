@@ -16,9 +16,12 @@ internal record class UrlKey(string Key, object? Value, UrlKey? Next)
 
 internal static class UrlParser
 {
-    internal static (string, UrlKey) ResolveUrlParameters(string urlFormat, IDictionary<string, object> attrs)
+    internal static (string, UrlKey) ResolveUrlParameters(string urlFormat, Dictionary<string, object> attrs, Dictionary<string, object> keyAttrs)
     {
         var key = new UrlKey("__url", urlFormat, null);
+
+        foreach(var kv in keyAttrs)
+            key = key.Push(kv.Key, kv.Value);
 
         StringBuilder newUrl = new(urlFormat.Length);
         int paramStartIx = -1;

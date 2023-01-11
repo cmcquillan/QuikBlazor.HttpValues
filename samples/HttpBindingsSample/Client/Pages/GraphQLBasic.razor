@@ -2,7 +2,7 @@
 
 <section>
     <label for="cake">Cake Lookup:</label>
-    <input name="cake" @bind="SearchValue" type="text" />
+    <input name="cake" @bind="SearchValue" @bind:event="oninput" type="text" />
     <button type="button" @onclick="UpdateValue">Lookup Cake</button>
 </section>
 

@@ -99,7 +99,11 @@ public abstract class HttpValueBase<TValue> : ComponentBase
     {
         if (Url is not null)
         {
-            (var newUrl, var newKey) = UrlParser.ResolveUrlParameters(Url, InputAttributes);
+            (string? newUrl, UrlKey? newKey) = UrlParser.ResolveUrlParameters(Url, InputAttributes, new()
+            {
+                { "__method", Method },
+                { "__body", RequestBody ?? new object() }
+            });
 
             if (newKey.Equals(_urlKey))
             {

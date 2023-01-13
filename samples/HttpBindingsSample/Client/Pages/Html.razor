@@ -1,0 +1,39 @@
+﻿@page "/html"
+
+<section>
+    <label for="cake">Cake Lookup:</label>
+    <input name="cake" @bind="SearchValue" type="text" />
+    <button type="button" @onclick="UpdateValue">Lookup Cake</button>
+</section>
+
+<section>
+    <CascadingHttpValue Context="html" TValue="MarkupString" Url="https://localhost:7077/cakes/{cakeId}.html" cakeId="@CakeId">
+        <ErrorTemplate>
+            <ErrorTemplateSelector>
+                <Http404>
+                    There is no cake with that id!
+                </Http404>
+                <Default>
+                    Oh shit
+                </Default>
+            </ErrorTemplateSelector>
+        </ErrorTemplate>
+        <LoadingContent>
+            Loading...
+        </LoadingContent>
+        <ChildContent>
+            @(html)
+        </ChildContent>
+    </CascadingHttpValue>
+</section>
+
+@code {
+    public string CakeId { get; set; } = "1";
+
+    public string SearchValue { get; set; } = "1";
+
+    private void UpdateValue()
+    {
+        CakeId = SearchValue;
+    }
+}

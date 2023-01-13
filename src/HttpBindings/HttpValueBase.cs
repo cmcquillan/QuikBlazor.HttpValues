@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using HttpBindings.Responses;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using System.Diagnostics;
 using System.Text;
@@ -54,7 +55,10 @@ public abstract class HttpValueBase<TValue> : ComponentBase
     protected HttpResponseMessage? ErrorResponse { get; private set; }
 
     [Inject]
-    private IHttpClientFactory? ClientFactory { get; set; }
+    private IHttpClientFactory ClientFactory { get; set; } = null!;
+
+    [Inject]
+    private ResponseMapperProvider MapperProvider { get; set; } = null!;
 
     protected abstract Task OnNewValueAsync(TValue? value);
 
@@ -155,10 +159,12 @@ public abstract class HttpValueBase<TValue> : ComponentBase
                     var response = await httpTask;
                     if (response is not null)
                     {
-                        if (response.IsSuccessStatusCode)
+                        var responseType = typeof(TValue);
+                        if (response.IsSuccessStatusCode && MapperProvider.GetProvider(responseType, response) is { } mapper)
                         {
                             ErrorState = CascadingHttpValueErrorState.None;
-                            Result = await JsonSerializer.DeserializeAsync<TValue>(await response.Content.ReadAsStreamAsync(token), _serializerOptions);
+
+                            Result = (TValue?)await mapper.Map(responseType, response);
                             await OnNewValueAsync(Result);
                         }
                         else

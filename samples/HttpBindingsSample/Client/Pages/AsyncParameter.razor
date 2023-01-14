@@ -1,0 +1,50 @@
+﻿@page "/async-parameter/{id}"
+
+<section>
+    <a href="/async-parameter/1">1</a>
+    <a href="/async-parameter/2">2</a>
+    <a href="/async-parameter/3">3</a>
+    <a href="/async-parameter/4">4</a>
+    <a href="/async-parameter/5">5</a>
+</section>
+
+<section>
+    <CascadingHttpValue Context="cake" TValue="Cake" Url="https://localhost:7077/cakes/{cakeId}" cakeId="@CakeId">
+        <ErrorTemplate>
+            <ErrorTemplateSelector>
+                <Http404>
+                    There is no cake with that id!
+                </Http404>
+                <Default>
+                    Oh shit
+                </Default>
+            </ErrorTemplateSelector>
+        </ErrorTemplate>
+        <LoadingContent>
+            Loading...
+        </LoadingContent>
+        <ChildContent>
+            <div>
+                <h2>@cake.Name</h2>
+                <strong>@cake.Origin</strong>
+            </div>
+            <div>
+                <p>
+                    @cake.Description
+                </p>
+            </div>
+        </ChildContent>
+    </CascadingHttpValue>
+</section>
+
+@code {
+    [Parameter]
+    public string? Id { get; set; }
+
+    public Task<string?>? CakeId { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        CakeId = Task.Delay(2000).ContinueWith((t) => Id);
+    }
+}

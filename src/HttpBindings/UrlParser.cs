@@ -16,7 +16,7 @@ internal record class UrlKey(string Key, object? Value, UrlKey? Next)
 
 internal static class UrlParser
 {
-    internal static (string, UrlKey) ResolveUrlParameters(string urlFormat, Dictionary<string, object> attrs, Dictionary<string, object> keyAttrs)
+    internal static (string, UrlKey) ResolveUrlParameters(string urlFormat, Dictionary<string, object?> attrs, Dictionary<string, object> keyAttrs)
     {
         var key = new UrlKey("__url", urlFormat, null);
 

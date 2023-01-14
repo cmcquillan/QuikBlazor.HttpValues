@@ -1,8 +1,6 @@
 ﻿using HttpBindings.Responses;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Rendering;
 using System.Diagnostics;
-using System.Text;
 using System.Text.Json;
 
 namespace HttpBindings;
@@ -15,7 +13,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase
     private CancellationTokenSource? _cancellationTokenSource;
     private CancellationTokenSource? _previousTokenSource;
     private Task<HttpResponseMessage?>? _responseTask;
-    private JsonSerializerOptions _serializerOptions = new JsonSerializerOptions()
+    private JsonSerializerOptions _serializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
@@ -103,7 +101,20 @@ public abstract class HttpValueBase<TValue> : ComponentBase
     {
         if (Url is not null)
         {
-            (string? newUrl, UrlKey? newKey) = UrlParser.ResolveUrlParameters(Url, InputAttributes, new()
+            var attrs = new Dictionary<string, object?>(InputAttributes!);
+
+            foreach (var attr in InputAttributes)
+            {
+                if (attr.Value is Task t)
+                {
+                    if (!t.IsCompleted)
+                        await t;
+
+                    attrs[attr.Key] = t.GetType().GetProperty("Result")?.GetValue(t);
+                }
+            }
+
+            (string? newUrl, UrlKey? newKey) = UrlParser.ResolveUrlParameters(Url, attrs, new()
             {
                 { "__method", Method },
                 { "__body", RequestBody ?? new object() }

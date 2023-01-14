@@ -148,63 +148,74 @@ public abstract class HttpValueBase<TValue> : ComponentBase
                 : new CancellationTokenSource();
 
             var token = _cancellationTokenSource.Token;
-            var task = await TaskHelper.Debounce(() =>
+
+            if (DebounceMilliseconds.HasValue)
             {
-                using var request = new HttpRequestMessage(Method switch
-                {
-                    HttpMethod.Get => System.Net.Http.HttpMethod.Get,
-                    HttpMethod.Post => System.Net.Http.HttpMethod.Post,
-                    _ => throw new NotSupportedException(),
-                }, _resolvedUrl);
+                await Task.Delay(DebounceMilliseconds.Value);
+            }
 
-                if (Method is HttpMethod.Post or HttpMethod.Put)
-                {
-                    request.Content = GetRequestBody();
-                }
-
-                return Client.SendAsync(request, token);
-            }, DebounceMilliseconds, token).ContinueWith(async (httpTask) =>
+            if (token.IsCancellationRequested)
             {
-                if (!httpTask.IsCanceled && !token.IsCancellationRequested)
-                {
-                    var response = await httpTask;
-                    if (response is not null)
-                    {
-                        var responseType = typeof(TValue);
-                        if (response.IsSuccessStatusCode && MapperProvider.GetProvider(responseType, response) is { } mapper)
-                        {
-                            ErrorState = CascadingHttpValueErrorState.None;
+                // Likely a debounce since we haven't initiated an http request yet
+                return;
+            }
 
-                            Result = (TValue?)await mapper.Map(responseType, response);
-                            await OnNewValueAsync(Result);
-                        }
-                        else
-                        {
-                            ErrorState = CascadingHttpValueErrorState.HttpError;
-                            ErrorResponse = response;
-                        }
+            // Build our request
+            using var request = new HttpRequestMessage(Method switch
+            {
+                HttpMethod.Get => System.Net.Http.HttpMethod.Get,
+                HttpMethod.Post => System.Net.Http.HttpMethod.Post,
+                _ => throw new NotSupportedException(),
+            }, _resolvedUrl);
 
-                        IsLoading = false;
-                        return response;
-                    }
-                }
+            if (Method is HttpMethod.Post or HttpMethod.Put)
+            {
+                request.Content = GetRequestBody();
+            }
 
-                if (httpTask.IsCanceled || token.IsCancellationRequested)
-                {
-                    ErrorState = CascadingHttpValueErrorState.Timeout;
-                    StateHasChanged();
-                }
-
-                if (httpTask.IsFaulted)
-                {
-                    var exception = httpTask.Exception;
-                }
-
-                return null;
-            });
-
-            _responseTask = task!;
+            // Start an http request.
+            _responseTask = Task.Run(() => SendHttpRequest(request, token));
         }
+    }
+
+    private async Task<HttpResponseMessage?> SendHttpRequest(HttpRequestMessage request, CancellationToken token)
+    {
+        try
+        {
+            var response = await Client!.SendAsync(request, token);
+            if (response is not null)
+            {
+                var responseType = typeof(TValue);
+                if (response.IsSuccessStatusCode && MapperProvider.GetProvider(responseType, response) is { } mapper)
+                {
+                    ErrorState = CascadingHttpValueErrorState.None;
+
+                    Result = (TValue?)await mapper.Map(responseType, response);
+                    await OnNewValueAsync(Result);
+                }
+                else
+                {
+                    ErrorState = CascadingHttpValueErrorState.HttpError;
+                    ErrorResponse = response;
+                }
+
+                IsLoading = false;
+                StateHasChanged();
+                return response;
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            ErrorState = CascadingHttpValueErrorState.Timeout;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            // Something else
+            Console.WriteLine(ex);
+        }
+
+        return null;
     }
 
     private HttpContent? GetRequestBody()

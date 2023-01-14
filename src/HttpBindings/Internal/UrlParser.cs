@@ -1,27 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 
-namespace HttpBindings;
-
-internal record class UrlKey(string Key, object? Value, UrlKey? Next)
-{
-    public UrlKey Push(string key, object? value)
-    {
-        return new UrlKey(key, value, this);
-    }
-}
+namespace HttpBindings.Internal;
 
 internal static class UrlParser
 {
-    internal static (string, UrlKey) ResolveUrlParameters(string urlFormat, Dictionary<string, object?> attrs, Dictionary<string, object> keyAttrs)
+    internal static (string, UrlKey) ResolveUrlParameters(string urlFormat, Dictionary<string, object?> attrs, Dictionary<string, object?> keyAttrs)
     {
         var key = new UrlKey("__url", urlFormat, null);
 
-        foreach(var kv in keyAttrs)
-            key = key.Push(kv.Key, kv.Value);
+        foreach (var kv in keyAttrs)
+            key = key.Push(kv.Key, new UrlValue(kv.Value));
 
         StringBuilder newUrl = new(urlFormat.Length);
         int paramStartIx = -1;
@@ -47,7 +35,7 @@ internal static class UrlParser
 
                 attrs.TryGetValue(paramName, out var paramValue);
                 newUrl.Append(paramValue);
-                key = key.Push(paramName, paramValue);
+                key = key.Push(paramName, new UrlValue(paramValue));
 
                 lastParamEndIx = paramEndIx + 1;
                 paramStartIx = -1;

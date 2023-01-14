@@ -4,5 +4,6 @@ public enum CascadingHttpValueErrorState
 {
     None,
     HttpError,
-    Timeout
+    Timeout,
+    Exception,
 }

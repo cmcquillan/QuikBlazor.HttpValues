@@ -1,4 +1,5 @@
-﻿using HttpBindings.Responses;
+﻿using HttpBindings.Internal;
+using HttpBindings.Responses;
 using Microsoft.AspNetCore.Components;
 using System.Diagnostics;
 using System.Text.Json;
@@ -21,15 +22,11 @@ public abstract class HttpValueBase<TValue> : ComponentBase
     [Parameter]
     public string? HttpClientName { get; set; }
 
-    public HttpClient? Client { get; set; }
-
     [Parameter]
     public string? ContentType { get; set; }
 
     [Parameter]
     public int? DebounceMilliseconds { get; set; }
-
-    public CascadingHttpValueErrorState ErrorState { get; private set; } = CascadingHttpValueErrorState.None;
 
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object> InputAttributes { get; set; } = new();
@@ -40,23 +37,27 @@ public abstract class HttpValueBase<TValue> : ComponentBase
     [Parameter]
     public object? RequestBody { get; set; }
 
-    public TValue? Result { get; set; }
-
     [Parameter]
     public int? TimeoutMilliseconds { get; set; }
 
     [Parameter]
     public string? Url { get; set; }
 
-    protected bool IsLoading { get; set; }
-
-    protected HttpResponseMessage? ErrorResponse { get; private set; }
-
     [Inject]
     private IHttpClientFactory ClientFactory { get; set; } = null!;
 
     [Inject]
     private ResponseMapperProvider MapperProvider { get; set; } = null!;
+
+    public CascadingHttpValueErrorState ErrorState { get; private set; } = CascadingHttpValueErrorState.None;
+
+    protected HttpClient? Client { get; set; }
+
+    protected TValue? Result { get; set; }
+
+    protected bool IsLoading { get; set; }
+
+    protected HttpResponseMessage? ErrorResponse { get; private set; }
 
     protected abstract Task OnNewValueAsync(TValue? value);
 
@@ -117,7 +118,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase
             (string? newUrl, UrlKey? newKey) = UrlParser.ResolveUrlParameters(Url, attrs, new()
             {
                 { "__method", Method },
-                { "__body", RequestBody ?? new object() }
+                { "__body", Method is HttpMethod.Post or HttpMethod.Put ? RequestBody : null }
             });
 
             if (newKey.Equals(_urlKey))
@@ -161,7 +162,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase
             }
 
             // Build our request
-            using var request = new HttpRequestMessage(Method switch
+            var request = new HttpRequestMessage(Method switch
             {
                 HttpMethod.Get => System.Net.Http.HttpMethod.Get,
                 HttpMethod.Post => System.Net.Http.HttpMethod.Post,
@@ -200,19 +201,21 @@ public abstract class HttpValueBase<TValue> : ComponentBase
                 }
 
                 IsLoading = false;
-                StateHasChanged();
                 return response;
             }
         }
         catch (TaskCanceledException)
         {
             ErrorState = CascadingHttpValueErrorState.Timeout;
-            StateHasChanged();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            // Something else
-            Console.WriteLine(ex);
+            ErrorState = CascadingHttpValueErrorState.Exception;
+        }
+        finally
+        {
+            StateHasChanged();
+            request?.Dispose();
         }
 
         return null;

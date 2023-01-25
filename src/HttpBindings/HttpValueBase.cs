@@ -2,7 +2,6 @@
 using HttpBindings.Responses;
 using Microsoft.AspNetCore.Components;
 using System.Diagnostics;
-using System.Net.Mime;
 using System.Text.Json;
 
 namespace HttpBindings;
@@ -45,7 +44,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase
     public string? Url { get; set; }
 
     [Inject]
-    private IHttpClientFactory ClientFactory { get; set; } = null!;
+    private IHttpClientProvider ClientProvider { get; set; } = null!;
 
     [Inject]
     private ResponseMapperProvider MapperProvider { get; set; } = null!;
@@ -59,6 +58,11 @@ public abstract class HttpValueBase<TValue> : ComponentBase
     protected HttpResponseMessage? ErrorResponse { get; private set; }
 
     protected abstract Task OnNewValueAsync(TValue? value);
+
+    protected virtual Task OnErrorAsync(HttpValueErrorState errorState, HttpResponseMessage? httpResponse)
+    {
+        return Task.CompletedTask;
+    }
 
     protected async Task FireHttpRequest(bool forceFire = false)
     {
@@ -159,13 +163,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase
 
         _httpClientName = HttpClientName;
 
-        Client = (_httpClientName, ClientFactory) switch
-        {
-            (not null, null) => throw new NotSupportedException("Cannot use IHttpClientFactory"),
-            (null, null) => new HttpClient(),
-            (null, not null) => ClientFactory.CreateClient(),
-            (not null, not null) => ClientFactory.CreateClient(_httpClientName),
-        };
+        Client = ClientProvider.GetHttpClient(_httpClientName);
     }
 
     private async Task<HttpResponseMessage?> SendHttpRequest(HttpRequestMessage request, CancellationToken token)

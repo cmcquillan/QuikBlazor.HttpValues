@@ -11,6 +11,7 @@ public static class DependencyInjectionExtensions
         services.AddSingleton<ResponseMapperProvider>();
         services.AddSingleton<IResponseMapper, JsonMapper>();
         services.AddSingleton<IResponseMapper, HtmlMapper>();
+        services.AddSingleton<IHttpClientProvider, HttpClientProvider>();
         return services;
     }
 }

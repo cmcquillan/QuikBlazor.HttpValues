@@ -19,4 +19,9 @@ public partial class HttpValue<TValue> : HttpValueBase<TValue>
     {
         await ValueChanged.InvokeAsync(value);
     }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await FireHttpRequest();
+    }
 }

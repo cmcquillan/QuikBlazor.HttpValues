@@ -2,6 +2,7 @@
 using HttpBindings.Responses;
 using Microsoft.AspNetCore.Components;
 using System.Diagnostics;
+using System.Net.Mime;
 using System.Text.Json;
 
 namespace HttpBindings;
@@ -23,7 +24,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase
     public string? HttpClientName { get; set; }
 
     [Parameter]
-    public string? ContentType { get; set; }
+    public string? ContentType { get; set; } = "application/json";
 
     [Parameter]
     public int? DebounceMilliseconds { get; set; }
@@ -49,57 +50,20 @@ public abstract class HttpValueBase<TValue> : ComponentBase
     [Inject]
     private ResponseMapperProvider MapperProvider { get; set; } = null!;
 
-    public CascadingHttpValueErrorState ErrorState { get; private set; } = CascadingHttpValueErrorState.None;
+    public HttpValueErrorState ErrorState { get; private set; } = HttpValueErrorState.None;
 
     protected HttpClient? Client { get; set; }
 
     protected TValue? Result { get; set; }
 
-    protected bool IsLoading { get; set; }
-
     protected HttpResponseMessage? ErrorResponse { get; private set; }
 
     protected abstract Task OnNewValueAsync(TValue? value);
 
-    protected override Task OnInitializedAsync()
-    {
-        IsLoading = true;
-
-        return base.OnInitializedAsync();
-    }
-
-    protected override void OnParametersSet()
+    protected async Task FireHttpRequest(bool forceFire = false)
     {
         UpdateHttpClientState();
 
-        void UpdateHttpClientState()
-        {
-            if (_httpClientName == HttpClientName && Client is not null)
-            {
-                // No change to client.
-                return;
-            }
-
-            if (_httpClientName is null && HttpClientName is null && Client is not null)
-            {
-                // No change to client.
-                return;
-            }
-
-            _httpClientName = HttpClientName;
-
-            Client = (_httpClientName, ClientFactory) switch
-            {
-                (not null, null) => throw new NotSupportedException("Cannot use IHttpClientFactory"),
-                (null, null) => new HttpClient(),
-                (null, not null) => ClientFactory.CreateClient(),
-                (not null, not null) => ClientFactory.CreateClient(_httpClientName),
-            };
-        }
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
         if (Url is not null)
         {
             var attrs = new Dictionary<string, object?>(InputAttributes!);
@@ -121,7 +85,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase
                 { "__body", Method is HttpMethod.Post or HttpMethod.Put ? RequestBody : null }
             });
 
-            if (newKey.Equals(_urlKey))
+            if (newKey.Equals(_urlKey) && !forceFire)
             {
                 return;
             }
@@ -179,6 +143,31 @@ public abstract class HttpValueBase<TValue> : ComponentBase
         }
     }
 
+    private void UpdateHttpClientState()
+    {
+        if (_httpClientName == HttpClientName && Client is not null)
+        {
+            // No change to client.
+            return;
+        }
+
+        if (_httpClientName is null && HttpClientName is null && Client is not null)
+        {
+            // No change to client.
+            return;
+        }
+
+        _httpClientName = HttpClientName;
+
+        Client = (_httpClientName, ClientFactory) switch
+        {
+            (not null, null) => throw new NotSupportedException("Cannot use IHttpClientFactory"),
+            (null, null) => new HttpClient(),
+            (null, not null) => ClientFactory.CreateClient(),
+            (not null, not null) => ClientFactory.CreateClient(_httpClientName),
+        };
+    }
+
     private async Task<HttpResponseMessage?> SendHttpRequest(HttpRequestMessage request, CancellationToken token)
     {
         try
@@ -189,28 +178,27 @@ public abstract class HttpValueBase<TValue> : ComponentBase
                 var responseType = typeof(TValue);
                 if (response.IsSuccessStatusCode && MapperProvider.GetProvider(responseType, response) is { } mapper)
                 {
-                    ErrorState = CascadingHttpValueErrorState.None;
+                    ErrorState = HttpValueErrorState.None;
 
                     Result = (TValue?)await mapper.Map(responseType, response);
                     await OnNewValueAsync(Result);
                 }
                 else
                 {
-                    ErrorState = CascadingHttpValueErrorState.HttpError;
+                    ErrorState = HttpValueErrorState.HttpError;
                     ErrorResponse = response;
                 }
 
-                IsLoading = false;
                 return response;
             }
         }
         catch (TaskCanceledException)
         {
-            ErrorState = CascadingHttpValueErrorState.Timeout;
+            ErrorState = HttpValueErrorState.Timeout;
         }
         catch (Exception)
         {
-            ErrorState = CascadingHttpValueErrorState.Exception;
+            ErrorState = HttpValueErrorState.Exception;
         }
         finally
         {
@@ -225,29 +213,5 @@ public abstract class HttpValueBase<TValue> : ComponentBase
     {
         var content = JsonSerializer.Serialize(RequestBody, _serializerOptions);
         return new StringContent(content, new System.Net.Http.Headers.MediaTypeHeaderValue(ContentType!));
-        //        using var builder = new RenderTreeBuilder();
-        //        RequestBody?.Invoke(builder);
-        //        var frames = builder.GetFrames();
-
-        //        StringBuilder str = new();
-        //#pragma warning disable BL0006 // Do not use RenderTree types
-        //        for (int i = 0; i < frames.Count; i++)
-        //        {
-        //            switch (frames.Array[i].FrameType)
-        //            {
-        //                case Microsoft.AspNetCore.Components.RenderTree.RenderTreeFrameType.Text:
-        //                    str.Append(frames.Array[i].TextContent);
-        //                    break;
-        //                case Microsoft.AspNetCore.Components.RenderTree.RenderTreeFrameType.Markup:
-        //                    str.Append(frames.Array[i].MarkupContent);
-        //                    break;
-        //                default:
-        //                    throw new NotSupportedException("Only text content is supported within the RequestBody template.");
-        //            }
-        //        }
-        //#pragma warning restore BL0006 // Do not use RenderTree types
-
-        //        var content = str.ToString();
-
     }
 }

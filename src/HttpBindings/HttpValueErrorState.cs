@@ -1,6 +1,6 @@
 ﻿namespace HttpBindings;
 
-public enum CascadingHttpValueErrorState
+public enum HttpValueErrorState
 {
     None,
     HttpError,

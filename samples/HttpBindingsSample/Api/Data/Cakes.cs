@@ -9,9 +9,11 @@ public class CakeQuery
 
 public record class Cake(int Id, string Name, string Origin, string Description);
 
+public record class CakePost(string Name, string Origin, string Description);
+
 public static class Cakes
 {
-    public static IReadOnlyList<Cake> List { get; } = new List<Cake>()
+    public static IList<Cake> List { get; } = new List<Cake>()
     {
         new Cake(1, @"Amandine", @"Romania", @"A chocolate layered cake filled with chocolate, caramel and fondant cream."),
         new Cake(2, @"Amygdalopita", @"Greece", @"An almond cake made with ground almonds, flour, butter, egg and pastry cream."),

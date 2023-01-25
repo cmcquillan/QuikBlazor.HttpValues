@@ -1,0 +1,7 @@
+﻿.red-button {
+    color: red;
+}
+
+.red-button:disabled {
+    color: blue;
+}

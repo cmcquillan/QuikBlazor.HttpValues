@@ -85,7 +85,7 @@ public class CascadingHttpValueTests : IClassFixture<WebApplicationFactory<Progr
         cut.WaitForElement("#error", TimeSpan.FromSeconds(2));
         var err = cut.Find("#error");
 
-        Assert.Equal(CascadingHttpValueErrorState.HttpError, cut.Instance.ErrorState);
+        Assert.Equal(HttpValueErrorState.HttpError, cut.Instance.ErrorState);
         Assert.Equal("Error State", err.TextContent);
     }
 
@@ -101,7 +101,7 @@ public class CascadingHttpValueTests : IClassFixture<WebApplicationFactory<Progr
         cut.WaitForElement("#error", TimeSpan.FromSeconds(2));
         var err = cut.Find("#error");
 
-        Assert.Equal(CascadingHttpValueErrorState.HttpError, cut.Instance.ErrorState);
+        Assert.Equal(HttpValueErrorState.HttpError, cut.Instance.ErrorState);
         Assert.Equal("Error 404", err.TextContent);
     }
 
@@ -118,7 +118,7 @@ public class CascadingHttpValueTests : IClassFixture<WebApplicationFactory<Progr
         cut.WaitForElement("#error", TimeSpan.FromSeconds(2));
         var err = cut.Find("#error");
 
-        Assert.Equal(CascadingHttpValueErrorState.Timeout, cut.Instance.ErrorState);
+        Assert.Equal(HttpValueErrorState.Timeout, cut.Instance.ErrorState);
         Assert.Equal("Timeout", err.TextContent);
     }
 

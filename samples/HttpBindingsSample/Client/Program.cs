@@ -20,3 +20,12 @@ public record GQL<T>(T Data);
 public record class CakeByIdResponse(Cake CakeById);
 
 public record CakeQuery(int CakeId);
+
+public class NewCakeRequest
+{
+    public string? Name { get; set; }
+
+    public string? Origin { get; set; }
+
+    public string? Description { get; set; }
+}

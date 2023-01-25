@@ -1,6 +1,6 @@
 ﻿@using System.Net
 
-@if (ErrorState == CascadingHttpValueErrorState.Timeout && Timeout is not null)
+@if (ErrorState == HttpValueErrorState.Timeout && Timeout is not null)
 {
     @Timeout
 }
@@ -15,7 +15,7 @@ else
 
 @code {
     [CascadingParameter(Name = "__httpErrorState")]
-    protected CascadingHttpValueErrorState ErrorState { get; set; }
+    protected HttpValueErrorState ErrorState { get; set; }
 
     [CascadingParameter(Name = "__httpResponse")]
     protected HttpResponseMessage? HttpResponse { get; set; }

@@ -37,6 +37,15 @@ cakeApi.MapGet("/{id}.html", (int id) => Cakes.List.Where(p => p.Id == id).Selec
             </div>
 ", "text/html")).Single());
 
+cakeApi.MapPost("/", async ([FromBodyAttribute] CakePost cake) =>
+{
+    await Task.Delay(1000);
+    var id = Cakes.List.Max(p => p.Id) + 1;
+    var cakeData = new Cake(id, cake.Name, cake.Origin, cake.Description);
+    Cakes.List.Add(cakeData);
+    return cakeData;
+});
+
 
 app.MapGet("/errors/{code}", (int code) => Results.StatusCode(code));
 app.MapGet("/timeouts/{time}", async (int time) =>

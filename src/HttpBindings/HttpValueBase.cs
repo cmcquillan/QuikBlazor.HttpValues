@@ -2,11 +2,12 @@
 using HttpBindings.Responses;
 using Microsoft.AspNetCore.Components;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace HttpBindings;
 
-public abstract class HttpValueBase<TValue> : ComponentBase
+public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable<TValue>
 {
     private string? _httpClientName;
     private string? _resolvedUrl;
@@ -14,6 +15,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase
     private CancellationTokenSource? _cancellationTokenSource;
     private CancellationTokenSource? _previousTokenSource;
     private Task<HttpResponseMessage?>? _responseTask;
+    private TaskCompletionSource<TValue?>? _awaitableTaskSource;
     private JsonSerializerOptions _serializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -67,6 +69,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase
     protected async Task FireHttpRequest(bool forceFire = false)
     {
         UpdateHttpClientState();
+        InitializeAndGetCompletionSource();
 
         if (Url is not null)
         {
@@ -91,6 +94,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase
 
             if (newKey.Equals(_urlKey) && !forceFire)
             {
+                CompleteAndClearCompletionSource(s => s.TrySetResult(Result));
                 return;
             }
 
@@ -102,6 +106,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase
         {
             if (_cancellationTokenSource is not null)
             {
+                CompleteAndClearCompletionSource(s => s.TrySetResult(Result));
                 Debug.WriteLine("Cancelling current token");
                 _previousTokenSource = _cancellationTokenSource;
                 _cancellationTokenSource.Cancel();
@@ -180,6 +185,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase
 
                     Result = (TValue?)await mapper.Map(responseType, response);
                     await OnNewValueAsync(Result);
+                    CompleteAndClearCompletionSource(s => s.TrySetResult(Result));
                 }
                 else
                 {
@@ -190,13 +196,15 @@ public abstract class HttpValueBase<TValue> : ComponentBase
                 return response;
             }
         }
-        catch (TaskCanceledException)
+        catch (TaskCanceledException ex)
         {
             ErrorState = HttpValueErrorState.Timeout;
+            CompleteAndClearCompletionSource(s => s.TrySetException(ex));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             ErrorState = HttpValueErrorState.Exception;
+            CompleteAndClearCompletionSource(s => s.TrySetException(ex));
         }
         finally
         {
@@ -211,5 +219,24 @@ public abstract class HttpValueBase<TValue> : ComponentBase
     {
         var content = JsonSerializer.Serialize(RequestBody, _serializerOptions);
         return new StringContent(content, new System.Net.Http.Headers.MediaTypeHeaderValue(ContentType!));
+    }
+
+    public TaskAwaiter<TValue?> GetAwaiter()
+    {
+        var source = InitializeAndGetCompletionSource();
+        return source.Task.GetAwaiter();
+    }
+
+    private TaskCompletionSource<TValue?> InitializeAndGetCompletionSource()
+    {
+        return _awaitableTaskSource ??= new TaskCompletionSource<TValue?>();
+    }
+
+    private void CompleteAndClearCompletionSource(Action<TaskCompletionSource<TValue?>> callback)
+    {
+        if (_awaitableTaskSource is not null)
+            callback(_awaitableTaskSource);
+
+        _awaitableTaskSource = null;
     }
 }

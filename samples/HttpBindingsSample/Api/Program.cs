@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
+    .AddSingleton<Random>()
     .AddGraphQLServer()
     .AddQueryType<CakeQuery>();
 
@@ -36,6 +37,10 @@ cakeApi.MapGet("/{id}.html", (int id) => Cakes.List.Where(p => p.Id == id).Selec
                 </p>
             </div>
 ", "text/html")).Single());
+cakeApi.MapGet("/random", ([FromServices] Random rand) =>
+{
+    return rand.Next();
+});
 
 cakeApi.MapPost("/", async ([FromBodyAttribute] CakePost cake) =>
 {

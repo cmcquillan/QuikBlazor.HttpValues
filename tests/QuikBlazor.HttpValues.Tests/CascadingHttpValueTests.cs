@@ -16,7 +16,9 @@ public class CascadingHttpValueTests : IClassFixture<WebApplicationFactory<Progr
         _context = new TestContext();
 
         var client = factory.CreateDefaultClient();
-        _context.Services.AddSingleton<IHttpClientFactory>(new TestHttpClientFactory(client));
+        _context.Services
+            .AddHttpValues()
+            .AddSingleton<IHttpClientFactory>(new TestHttpClientFactory(client));
     }
 
     public void Dispose()

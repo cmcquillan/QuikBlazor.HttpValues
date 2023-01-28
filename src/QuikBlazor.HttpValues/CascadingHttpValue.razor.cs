@@ -30,6 +30,10 @@ public partial class CascadingHttpValue<TValue> : HttpValueBase<TValue>
 
     protected override async Task OnParametersSetAsync()
     {
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
         await FireHttpRequest();
     }
 

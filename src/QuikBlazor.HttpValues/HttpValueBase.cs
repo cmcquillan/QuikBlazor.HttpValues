@@ -196,10 +196,10 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
                 return response;
             }
         }
-        catch (TaskCanceledException ex)
+        catch (OperationCanceledException tex)
         {
             ErrorState = HttpValueErrorState.Timeout;
-            CompleteAndClearCompletionSource(s => s.TrySetException(ex));
+            CompleteAndClearCompletionSource(s => s.TrySetException(tex));
         }
         catch (Exception ex)
         {
@@ -208,8 +208,11 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
         }
         finally
         {
-            StateHasChanged();
             request?.Dispose();
+            await InvokeAsync(() =>
+            {
+                StateHasChanged();
+            });
         }
 
         return null;

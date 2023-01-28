@@ -7,7 +7,10 @@
 </section>
 
 <section>
-    <CascadingHttpValue Context="cake" TValue="Cake" Url="https://localhost:7077/cakes/{cakeId}" cakeId="@CakeId">
+    <CascadingHttpValue Context="cake" 
+                        TValue="Cake" 
+                        Url="https://localhost:7077/cakes/{cakeId}" 
+                        cakeId="@CakeId">
         <ErrorTemplate>
             <ErrorTemplateSelector>
                 <Http404>

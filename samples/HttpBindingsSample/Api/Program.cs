@@ -39,7 +39,7 @@ cakeApi.MapGet("/{id}.html", (int id) => Cakes.List.Where(p => p.Id == id).Selec
 ", "text/html")).Single());
 cakeApi.MapGet("/random", ([FromServices] Random rand) =>
 {
-    return rand.Next();
+    return new { Id = rand.Next(1, Cakes.List.Max(p => p.Id)) };
 });
 
 cakeApi.MapPost("/", async ([FromBodyAttribute] CakePost cake) =>

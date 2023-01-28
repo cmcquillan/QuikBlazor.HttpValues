@@ -15,6 +15,14 @@ await builder.Build().RunAsync();
 
 public record class Cake(int Id, string Name, string Origin, string Description);
 
+public record class CakeChoice(int Id)
+{
+    public override string ToString()
+    {
+        return Id.ToString();
+    }
+}
+
 public record GQL<T>(T Data);
 
 public record class CakeByIdResponse(Cake CakeById);

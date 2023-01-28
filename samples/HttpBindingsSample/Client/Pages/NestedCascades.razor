@@ -1,0 +1,46 @@
+﻿@page "/nested-cascades"
+
+<section>
+
+    <CascadingHttpValue TValue="CakeChoice"
+                        Context="id"
+                        Url="https://localhost:7077/cakes/random">
+        <ChildContent>
+            <CascadingHttpValue Context="cake"
+                                TValue="Cake"
+                                Url="https://localhost:7077/cakes/{cakeId}"
+                                cakeId="@id">
+                <ErrorTemplate>
+                    <ErrorTemplateSelector>
+                        <Http404>
+                            There is no cake with that id!
+                        </Http404>
+                        <Default>
+                            Oh shit
+                        </Default>
+                    </ErrorTemplateSelector>
+                </ErrorTemplate>
+                <LoadingContent>
+                    Loading...
+                </LoadingContent>
+                <ChildContent>
+                    <div>
+                        <h2>@cake.Name</h2>
+                        <strong>@cake.Origin</strong>
+                    </div>
+                    <div>
+                        <p>
+                            @cake.Description
+                        </p>
+                    </div>
+                </ChildContent>
+            </CascadingHttpValue>
+        </ChildContent>
+
+    </CascadingHttpValue>
+
+</section>
+
+@code {
+
+}

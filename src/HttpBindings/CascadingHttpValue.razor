@@ -11,17 +11,19 @@
 }
 else
 {
-    <CascadingValue Value="Result">
-        <ChildContent>
-            @if (ChildContent is not null && Result is not null)
-            {
-                @ChildContent(Result)
-            }
-
-            @if (IsLoading && LoadingContent is not null)
-            {
-                @LoadingContent
-            }
-        </ChildContent>
-    </CascadingValue>
+    @if (IsLoading && LoadingContent is not null)
+    {
+        @LoadingContent
+    }
+    else
+    {
+        <CascadingValue Value="Result">
+            <ChildContent>
+                @if (ChildContent is not null && Result is not null)
+                {
+                    @ChildContent(Result)
+                }
+            </ChildContent>
+        </CascadingValue>
+    }
 }

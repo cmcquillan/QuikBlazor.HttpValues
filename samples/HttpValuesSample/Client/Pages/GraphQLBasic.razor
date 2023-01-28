@@ -1,0 +1,53 @@
+﻿@page "/graphql-basic"
+
+<section>
+    <label for="cake">Cake Lookup:</label>
+    <input name="cake" @bind="SearchValue" @bind:event="oninput" type="text" />
+    <button type="button" @onclick="UpdateValue">Lookup Cake</button>
+</section>
+
+<section>
+    <CascadingHttpValue TValue="GQL<CakeByIdResponse>"
+                        Context="response"
+                        Method="QuikBlazor.HttpValues.HttpMethod.Post"
+                        ContentType="application/json"
+                        Url="https://localhost:7077/graphql"
+                        RequestBody="Query">
+        <LoadingContent>
+            Loading...
+        </LoadingContent>
+        <ChildContent>
+            <div>
+                <h2>@response.Data.CakeById.Name</h2>
+                <strong>@response.Data.CakeById.Origin</strong>
+            </div>
+            <div>
+                <p>
+                    @response.Data.CakeById.Description
+                </p>
+            </div>
+        </ChildContent>
+    </CascadingHttpValue>
+</section>
+
+@code {
+    public const string GraphQL = @"
+query getCake($cakeId: Int!) {
+    cakeById(id: $cakeId) {
+        id 
+        name 
+        origin 
+        description
+    }
+}";
+
+    public string SearchValue { get; set; } = "1";
+
+    public GraphQLQuery<CakeQuery> Query { get; set; } = new GraphQLQuery<CakeQuery>(GraphQL, new CakeQuery(1));
+
+    private void UpdateValue()
+    {
+        int.TryParse(SearchValue, out var cakeId);
+        Query = new GraphQLQuery<CakeQuery>(GraphQL, new CakeQuery(cakeId));
+    }
+}

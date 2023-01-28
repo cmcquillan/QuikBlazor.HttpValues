@@ -1,0 +1,51 @@
+﻿@page "/button-post"
+
+<section>
+    <h2>New Cake</h2>
+
+    <p>
+        <label for="name">Name</label>
+        <input name="cake" @bind="NewCake.Name" type="text" />
+    </p>
+
+    <p>
+        <label for="origin">Origin</label>
+        <input name="origin" @bind="NewCake.Origin" type="text" />
+    </p>
+
+    <p>
+        <label for="description">Description</label>
+        <input name="description" @bind="NewCake.Description" type="text" />
+    </p>
+
+    <HttpButton TValue="Cake"
+                Class="red-button"
+                DisableOnWait="true"
+                Url="https://localhost:7077/cakes/"
+                Method="QuikBlazor.HttpValues.HttpMethod.Post"
+                Text="Add Cake"
+                RequestBody="NewCake"
+                ResponseCallback="OnCakeResponse"
+                button-data-random-attr="the-cake-button" />
+</section>
+
+@if (Response is not null)
+{
+    <section>
+        Id: @Response.Id <br />
+        Name: @Response.Name <br />
+        Origin: @Response.Origin <br />
+        Description: @Response.Description <br />
+    </section>
+}
+
+@code {
+    public NewCakeRequest NewCake { get; set; } = new NewCakeRequest();
+
+    public Cake? Response { get; set; }
+
+    public void OnCakeResponse(HttpButtonEventArgs<Cake> eventArgs)
+    {
+        Response = eventArgs.Value;
+    }
+}

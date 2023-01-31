@@ -1,13 +1,13 @@
 ﻿using QuikBlazor.HttpValues.Internal;
 using QuikBlazor.HttpValues.Responses;
 using Microsoft.AspNetCore.Components;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace QuikBlazor.HttpValues;
 
-public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable<TValue>
+public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable<TValue>, ISignalReceiver
 {
     private string? _httpClientName;
     private string? _resolvedUrl;
@@ -51,6 +51,12 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
     [Inject]
     private ResponseMapperProvider MapperProvider { get; set; } = null!;
 
+    [Inject]
+    private ChangeSignalService SignalService { get; set; } = null!;
+
+    [Inject]
+    private ILogger<HttpValueBase<TValue>> Logger { get; set; } = null!;
+
     public HttpValueErrorState ErrorState { get; private set; } = HttpValueErrorState.None;
 
     protected HttpClient? Client { get; set; }
@@ -58,6 +64,11 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
     protected TValue? Result { get; set; }
 
     protected HttpResponseMessage? ErrorResponse { get; private set; }
+
+    protected override void OnInitialized()
+    {
+        SignalService.RegisterForSignal(this);
+    }
 
     protected abstract Task OnNewValueAsync(TValue? value);
 
@@ -92,7 +103,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
                 { "__body", Method is HttpMethod.Post or HttpMethod.Put ? RequestBody : null }
             });
 
-            if (newKey.Equals(_urlKey) && !forceFire)
+            if (newKey.Equals(_urlKey) && !forceFire && _responseTask?.Status != TaskStatus.WaitingForActivation)
             {
                 CompleteAndClearCompletionSource(s => s.TrySetResult(Result));
                 return;
@@ -107,7 +118,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
             if (_cancellationTokenSource is not null)
             {
                 CompleteAndClearCompletionSource(s => s.TrySetResult(Result));
-                Debug.WriteLine("Cancelling current token");
+                Logger.LogInformation("Cancelling current token");
                 _previousTokenSource = _cancellationTokenSource;
                 _cancellationTokenSource.Cancel();
                 _cancellationTokenSource = null;
@@ -116,7 +127,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
 
         if (Client is not null)
         {
-            Debug.WriteLine("Constructing cancellation token from {0}ms", TimeoutMilliseconds);
+            Logger.LogInformation("Constructing cancellation token from {0}ms", TimeoutMilliseconds);
             _cancellationTokenSource = TimeoutMilliseconds.HasValue
                 ? new CancellationTokenSource(TimeoutMilliseconds.Value)
                 : new CancellationTokenSource();
@@ -184,7 +195,13 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
                     ErrorState = HttpValueErrorState.None;
 
                     Result = (TValue?)await mapper.Map(responseType, response);
-                    await OnNewValueAsync(Result);
+
+                    await InvokeAsync(async () =>
+                    {
+                        await OnNewValueAsync(Result);
+                        Logger.LogInformation("Signalling changes on {0}", Url);
+                        await SignalService.Signal();
+                    });
                     CompleteAndClearCompletionSource(s => s.TrySetResult(Result));
                 }
                 else
@@ -241,5 +258,17 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
             callback(_awaitableTaskSource);
 
         _awaitableTaskSource = null;
+    }
+
+    public async Task FireRequest()
+    {
+        await FireHttpRequest(forceFire: true);
+    }
+
+    public async Task Signal()
+    {
+        Logger.LogInformation("Received Signal");
+        await FireHttpRequest();
+        Logger.LogInformation("Completed Signal on {0}", Url);
     }
 }

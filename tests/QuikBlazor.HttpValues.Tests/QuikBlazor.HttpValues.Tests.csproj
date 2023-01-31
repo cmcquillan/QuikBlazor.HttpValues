@@ -13,7 +13,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="bunit" Version="1.13.5" />
+		<PackageReference Include="bunit" Version="1.14.4" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="7.0.1" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="7.0.1" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2" />

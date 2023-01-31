@@ -1,10 +1,10 @@
 ﻿@code {
-    public static RenderFragment<SimpleData> Simple = (data) =>
+    public static RenderFragment<SimpleData?> Simple = (data) =>
     {
         return @<div id="data">
-            <h1>@data.Id</h1>
-            <h2>@data.Name</h2>
-            <h3>@data.Description</h3>
+            <h1>@data?.Id</h1>
+            <h2>@data?.Name</h2>
+            <h3>@data?.Description</h3>
         </div>;
     };
 

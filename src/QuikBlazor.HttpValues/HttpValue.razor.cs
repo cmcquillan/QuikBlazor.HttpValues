@@ -17,10 +17,13 @@ public partial class HttpValue<TValue> : HttpValueBase<TValue>
 
     protected override async Task OnNewValueAsync(TValue? value)
     {
-        await ValueChanged.InvokeAsync(value);
+        await InvokeAsync(async () =>
+        {
+            await ValueChanged.InvokeAsync(value);
+        });
     }
 
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await FireHttpRequest();
     }

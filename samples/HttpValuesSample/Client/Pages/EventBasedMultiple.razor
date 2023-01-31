@@ -1,9 +1,10 @@
-﻿@page "/event-based"
+﻿@page "/event-based-multi"
 
 <section>
-    <label for="cake">Cake Lookup:</label>
-    <input name="cake" @bind="SearchValue" type="text" />
-    <button type="button" @onclick="UpdateValue">Lookup Cake</button>
+    <button type="button" @onclick="NewCake">Random Cake</button>
+    <HttpValue @ref="http" TValue="CakeChoice"
+               Url="https://localhost:7077/cakes/random"
+               @bind-Value="CakeId" />
     <HttpValue TValue="Cake"
                Url="https://localhost:7077/cakes/{cakeId}"
                @bind-Value="Cake"
@@ -26,15 +27,14 @@
 </section>
 
 @code {
-    public string CakeId { get; set; } = "1";
+    private HttpValue<CakeChoice> http = null!;
 
-    public string SearchValue { get; set; } = "1";
-
-    private void UpdateValue()
-    {
-        CakeId = SearchValue;
-        Console.WriteLine(Cake);
-    }
+    public CakeChoice CakeId { get; set; } = new CakeChoice(1);
 
     public Cake? Cake { get; set; }
+
+    public async Task NewCake()
+    {
+        await http.FireRequest();
+    }
 }

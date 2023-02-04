@@ -29,9 +29,7 @@ jobs:
     - name: Dotnet Build
       run: dotnet build --no-restore --configuration release
     - name: Dotnet Pack
-      run: |
-        dotnet pack src/QuikBlazor.HttpValues --configuration release -o packages  \
-          $PRERELEASE_ARG /p:Version=$VERSION_NUMBER --no-restore --no-build
+      run: dotnet pack src/QuikBlazor.HttpValues --configuration release -o packages /p:Version=${{ env.VERSION_NUMBER }} --no-restore --no-build ${{ env.PRERELEASE_ARG }}
     - name: Nuget push
       run: dotnet nuget push packages/*.nupgk -k ${{ secrets.NUGET_API_KEY }} 
       

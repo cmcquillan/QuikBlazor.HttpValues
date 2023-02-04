@@ -31,7 +31,7 @@ jobs:
     - name: Dotnet Pack
       run: |
         dotnet pack src/QuikBlazor.HttpValues --configuration release -o packages  \
-          $PRERELEASE_ARG /p:Version=$VERSION_NUMBER 
+          $PRERELEASE_ARG /p:Version=$VERSION_NUMBER /p:NuGetVersion=6.4.x
     - name: Nuget push
-      run: dotnet nuget push packages/*.nupgk -k ${{ secrets.NUGET_API_KEY }} /p:NugetVersion=6.4.x
+      run: dotnet nuget push packages/*.nupgk -k ${{ secrets.NUGET_API_KEY }} 
       

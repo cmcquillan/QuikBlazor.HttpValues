@@ -20,6 +20,10 @@ jobs:
       uses: actions/setup-dotnet@v3.0.3
       with:
         dotnet-version: 7.x
+    - name: Setup NuGet.exe
+      uses: nuget/setup-nuget@v1
+      with:
+        nuget-version: 6.4.x
     - name: Dotnet Restore
       run: dotnet restore
     - name: Dotnet Build
@@ -29,5 +33,5 @@ jobs:
         dotnet pack src/QuikBlazor.HttpValues --configuration release -o packages  \
           $PRERELEASE_ARG /p:Version=$VERSION_NUMBER 
     - name: Nuget push
-      run: dotnet nuget push packages/*.nupgk -k ${{ secrets.NUGET_API_KEY }}
+      run: dotnet nuget push packages/*.nupgk -k ${{ secrets.NUGET_API_KEY }} /p:NugetVersion=6.4.x
       

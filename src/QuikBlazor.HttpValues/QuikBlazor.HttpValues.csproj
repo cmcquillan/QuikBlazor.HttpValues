@@ -11,7 +11,8 @@
     <RepositoryUrl>https://github.com/cmcquillan/QuikBlazor.HttpValues</RepositoryUrl>
     <PackageTags>Balzor HttpClient AspNet </PackageTags>
     <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
-    <FileVersion></FileVersion>
+    <FileVersion>$(VersionPrefix)</FileVersion>
+	  
   </PropertyGroup>
 
 

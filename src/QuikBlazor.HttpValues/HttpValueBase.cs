@@ -200,7 +200,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
                     {
                         await OnNewValueAsync(Result);
                         Logger.LogInformation("Signalling changes on {0}", Url);
-                        await SignalService.Signal();
+                        await SignalService.Signal(this);
                     });
                     CompleteAndClearCompletionSource(s => s.TrySetResult(Result));
                 }
@@ -265,7 +265,7 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
         await FireHttpRequest(forceFire: true);
     }
 
-    public async Task Signal()
+    async Task ISignalReceiver.Signal(object sender)
     {
         Logger.LogInformation("Received Signal");
         await FireHttpRequest();

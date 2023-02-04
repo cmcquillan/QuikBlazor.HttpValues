@@ -9,14 +9,14 @@ namespace QuikBlazor.HttpValues.Internal;
 
 internal interface ISignalReceiver
 {
-    Task Signal();
+    Task Signal(object sender);
 }
 
 internal class ChangeSignalService
 {
     private List<WeakReference<ISignalReceiver>> _receivers = new();
 
-    internal Task Signal()
+    internal Task Signal(object sender)
     {
         var tasks = new List<Task>();
 
@@ -32,9 +32,14 @@ internal class ChangeSignalService
                     continue;
                 }
 
+                if(Object.ReferenceEquals(signalReceiver, sender))
+                {
+                    continue;
+                }
+
                 tasks.Add(Task.Run(() =>
                 {
-                    signalReceiver?.Signal();
+                    signalReceiver?.Signal(sender);
                 }));
             }
 

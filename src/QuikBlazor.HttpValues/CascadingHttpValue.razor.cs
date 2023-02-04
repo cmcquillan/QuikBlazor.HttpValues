@@ -28,7 +28,7 @@ public partial class CascadingHttpValue<TValue> : HttpValueBase<TValue>
         base.OnInitialized();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnParametersSetAsync()
     {
         await FireHttpRequest();
     }

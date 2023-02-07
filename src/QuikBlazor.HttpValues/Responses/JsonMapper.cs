@@ -48,19 +48,19 @@ public class ParseableMapper : IResponseMapper
 }
 
 
-public class JsonMapper : IResponseMapper
+public class JsonMapper : IResponseMapper, IRequestBodyMapper
 {
     private JsonSerializerOptions _serializerOptions = new JsonSerializerOptions()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
-    public bool CanMap(Type resultType, HttpResponseMessage responseMessage)
-    {
-        return resultType.IsClass
-            && responseMessage.IsSuccessStatusCode
-            && responseMessage.Content.Headers?.ContentType?.MediaType is "application/json" or "text/json";
-    }
+    public bool CanMap(Type resultType, HttpResponseMessage responseMessage) => responseMessage.IsSuccessStatusCode
+            && IsSerializeable(resultType, responseMessage.Content.Headers?.ContentType?.MediaType);
+
+    public bool CanMap(Type requestType, string contentType, object? requestBody) => IsSerializeable(requestType, contentType);
+
+    private bool IsSerializeable(Type type, string? contentType) => type.IsClass && contentType is "application/json" or "text/json";
 
     public async Task<object?> Map(Type resultType, HttpResponseMessage responseMessage)
     {
@@ -72,5 +72,11 @@ public class JsonMapper : IResponseMapper
         }
 
         return default;
+    }
+
+    public HttpContent? Map(Type requestType, string contentType, object? requestBody)
+    {
+        var content = JsonSerializer.Serialize(requestBody, requestType, _serializerOptions);
+        return new StringContent(content, new System.Net.Http.Headers.MediaTypeHeaderValue(contentType));
     }
 }

@@ -1,37 +1,35 @@
 ﻿using QuikBlazor.HttpValues.Internal;
-using QuikBlazor.HttpValues.Responses;
 using Microsoft.AspNetCore.Components;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 namespace QuikBlazor.HttpValues;
 
+public class HttpComponentBase<TValue> : HttpValueBase<TValue>
+{
+    protected override Task OnNewValueAsync(TValue? value)
+    {
+        throw new NotImplementedException();
+    }
+}
+
 public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable<TValue>, ISignalReceiver
 {
-    private string? _httpClientName;
-    private string? _resolvedUrl;
+    private const string DefaultContentType = "application/json";
     private UrlKey _urlKey = new("", "", null);
-    private CancellationTokenSource? _cancellationTokenSource;
-    private CancellationTokenSource? _previousTokenSource;
-    private Task<HttpResponseMessage?>? _responseTask;
     private TaskCompletionSource<TValue?>? _awaitableTaskSource;
-    private JsonSerializerOptions _serializerOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
 
     [Parameter]
     public string? HttpClientName { get; set; }
 
     [Parameter]
-    public string? ContentType { get; set; } = "application/json";
+    public string? ContentType { get; set; } = HttpValueBase<TValue>.DefaultContentType;
 
     [Parameter]
     public int? DebounceMilliseconds { get; set; }
 
     [Parameter(CaptureUnmatchedValues = true)]
-    public Dictionary<string, object> InputAttributes { get; set; } = new();
+    public Dictionary<string, object?> InputAttributes { get; set; } = new();
 
     [Parameter]
     public HttpMethod Method { get; set; }
@@ -46,16 +44,16 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
     public string? Url { get; set; }
 
     [Inject]
-    private IHttpClientProvider ClientProvider { get; set; } = null!;
-
-    [Inject]
-    private ResponseMapperProvider MapperProvider { get; set; } = null!;
-
-    [Inject]
     private ChangeSignalService SignalService { get; set; } = null!;
 
     [Inject]
     private ILogger<HttpValueBase<TValue>> Logger { get; set; } = null!;
+
+    [Inject]
+    private HttpDataProvider DataProvider { get; set; } = null!;
+
+    [Inject]
+    private Debouncer Debouncer { get; set; } = null!;
 
     public HttpValueErrorState ErrorState { get; private set; } = HttpValueErrorState.None;
 
@@ -79,166 +77,64 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
 
     protected async Task FireHttpRequest(bool forceFire = false)
     {
-        UpdateHttpClientState();
-        InitializeAndGetCompletionSource();
-
         if (Url is not null)
         {
-            var attrs = new Dictionary<string, object?>(InputAttributes!);
-
-            foreach (var attr in InputAttributes)
+            CancellationTokenSource? source = null;
+            var parameters = new RequestParameters
             {
-                if (attr.Value is Task t)
+                Source = this,
+                PriorKey = _urlKey,
+                UrlTemplate = Url,
+                Method = Method,
+                RequestBody = RequestBody,
+                ContentType = ContentType ?? DefaultContentType,
+                HttpClientName = HttpClientName,
+            };
+
+            var events = new RequestEvents<TValue>
+            {
+                OnSuccess = OnRequestSuccess,
+                OnError = OnRequestError,
+            };
+
+            _urlKey = await Debouncer.Debounce(DebounceMilliseconds ?? 0, () =>
+            {
+                if (TimeoutMilliseconds.HasValue)
                 {
-                    if (!t.IsCompleted)
-                        await t;
-
-                    attrs[attr.Key] = t.GetType().GetProperty("Result")?.GetValue(t);
-                }
-            }
-
-            (string? newUrl, UrlKey? newKey) = UrlParser.ResolveUrlParameters(Url, attrs, new()
-            {
-                { "__method", Method },
-                { "__body", Method is HttpMethod.Post or HttpMethod.Put ? RequestBody : null }
-            });
-
-            if (newKey.Equals(_urlKey) && !forceFire && _responseTask?.Status != TaskStatus.WaitingForActivation)
-            {
-                CompleteAndClearCompletionSource(s => s.TrySetResult(Result));
-                return;
-            }
-
-            _resolvedUrl = newUrl;
-            _urlKey = newKey;
-        }
-
-        if (_responseTask is not null && _responseTask.IsCompleted)
-        {
-            if (_cancellationTokenSource is not null)
-            {
-                CompleteAndClearCompletionSource(s => s.TrySetResult(Result));
-                Logger.LogInformation("Cancelling current token");
-                _previousTokenSource = _cancellationTokenSource;
-                _cancellationTokenSource.Cancel();
-                _cancellationTokenSource = null;
-            }
-        }
-
-        if (Client is not null)
-        {
-            Logger.LogInformation("Constructing cancellation token from {0}ms", TimeoutMilliseconds);
-            _cancellationTokenSource = TimeoutMilliseconds.HasValue
-                ? new CancellationTokenSource(TimeoutMilliseconds.Value)
-                : new CancellationTokenSource();
-
-            var token = _cancellationTokenSource.Token;
-
-            if (DebounceMilliseconds.HasValue)
-            {
-                await Task.Delay(DebounceMilliseconds.Value);
-            }
-
-            if (token.IsCancellationRequested)
-            {
-                // Likely a debounce since we haven't initiated an http request yet
-                return;
-            }
-
-            // Build our request
-            var request = new HttpRequestMessage(Method switch
-            {
-                HttpMethod.Get => System.Net.Http.HttpMethod.Get,
-                HttpMethod.Post => System.Net.Http.HttpMethod.Post,
-                _ => throw new NotSupportedException(),
-            }, _resolvedUrl);
-
-            if (Method is HttpMethod.Post or HttpMethod.Put)
-            {
-                request.Content = GetRequestBody();
-            }
-
-            // Start an http request.
-            _responseTask = Task.Run(() => SendHttpRequest(request, token));
-        }
-    }
-
-    private void UpdateHttpClientState()
-    {
-        if (_httpClientName == HttpClientName && Client is not null)
-        {
-            // No change to client.
-            return;
-        }
-
-        if (_httpClientName is null && HttpClientName is null && Client is not null)
-        {
-            // No change to client.
-            return;
-        }
-
-        _httpClientName = HttpClientName;
-
-        Client = ClientProvider.GetHttpClient(_httpClientName);
-    }
-
-    private async Task<HttpResponseMessage?> SendHttpRequest(HttpRequestMessage request, CancellationToken token)
-    {
-        try
-        {
-            var response = await Client!.SendAsync(request, token);
-            if (response is not null)
-            {
-                var responseType = typeof(TValue);
-                if (response.IsSuccessStatusCode && MapperProvider.GetProvider(responseType, response) is { } mapper)
-                {
-                    ErrorState = HttpValueErrorState.None;
-
-                    Result = (TValue?)await mapper.Map(responseType, response);
-
-                    await InvokeAsync(async () =>
+                    source = new CancellationTokenSource(TimeoutMilliseconds.Value);
+                    source.Token.Register(async () =>
                     {
-                        await OnNewValueAsync(Result);
-                        Logger.LogInformation("Signalling changes on {0}", Url);
-                        await SignalService.Signal(this);
+                        await DataProvider.CancelHttpRequest(parameters, InputAttributes);
                     });
-                    CompleteAndClearCompletionSource(s => s.TrySetResult(Result));
-                }
-                else
-                {
-                    ErrorState = HttpValueErrorState.HttpError;
-                    ErrorResponse = response;
                 }
 
-                return response;
-            }
+                return DataProvider.FireHttpRequest<TValue>(
+                   parameters,
+                   attributes: InputAttributes,
+                   requestEvents: events);
+            }) ?? new UrlKey("", "", null);
         }
-        catch (OperationCanceledException tex)
-        {
-            ErrorState = HttpValueErrorState.Timeout;
-            CompleteAndClearCompletionSource(s => s.TrySetException(tex));
-        }
-        catch (Exception ex)
-        {
-            ErrorState = HttpValueErrorState.Exception;
-            CompleteAndClearCompletionSource(s => s.TrySetException(ex));
-        }
-        finally
-        {
-            request?.Dispose();
-            await InvokeAsync(() =>
-            {
-                StateHasChanged();
-            });
-        }
-
-        return null;
     }
 
-    private HttpContent? GetRequestBody()
+    private Task OnRequestError(HttpValueErrorState errorState, Exception? exception, HttpResponseMessage? response)
     {
-        var content = JsonSerializer.Serialize(RequestBody, _serializerOptions);
-        return new StringContent(content, new System.Net.Http.Headers.MediaTypeHeaderValue(ContentType!));
+        return InvokeAsync(async () =>
+        {
+            ErrorState = errorState;
+            ErrorResponse = response;
+            await OnErrorAsync(errorState, response);
+            StateHasChanged();
+        });
+    }
+
+    private Task OnRequestSuccess(TValue? result, HttpResponseMessage response)
+    {
+        return InvokeAsync(async () =>
+        {
+            Result = result;
+            await OnNewValueAsync(result);
+            StateHasChanged();
+        });
     }
 
     public TaskAwaiter<TValue?> GetAwaiter()
@@ -250,14 +146,6 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
     private TaskCompletionSource<TValue?> InitializeAndGetCompletionSource()
     {
         return _awaitableTaskSource ??= new TaskCompletionSource<TValue?>();
-    }
-
-    private void CompleteAndClearCompletionSource(Action<TaskCompletionSource<TValue?>> callback)
-    {
-        if (_awaitableTaskSource is not null)
-            callback(_awaitableTaskSource);
-
-        _awaitableTaskSource = null;
     }
 
     public async Task FireRequest()

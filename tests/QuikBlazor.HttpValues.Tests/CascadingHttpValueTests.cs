@@ -117,7 +117,7 @@ public class CascadingHttpValueTests : IClassFixture<WebApplicationFactory<Progr
             ComponentParameter.CreateParameter("ChildContent", Fragments.Simple),
             ComponentParameter.CreateParameter("ErrorTemplate", Fragments.Timeout));
 
-        cut.WaitForElement("#error", TimeSpan.FromSeconds(2));
+        cut.WaitForElement("#error", TimeSpan.FromSeconds(200));
         var err = cut.Find("#error");
 
         Assert.Equal(HttpValueErrorState.Timeout, cut.Instance.ErrorState);

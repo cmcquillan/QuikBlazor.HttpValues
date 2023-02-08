@@ -77,6 +77,6 @@ public class JsonMapper : IResponseMapper, IRequestBodyMapper
     public HttpContent? Map(Type requestType, string contentType, object? requestBody)
     {
         var content = JsonSerializer.Serialize(requestBody, requestType, _serializerOptions);
-        return new StringContent(content, new System.Net.Http.Headers.MediaTypeHeaderValue(contentType));
+        return new StringContent(content, null, contentType);
     }
 }

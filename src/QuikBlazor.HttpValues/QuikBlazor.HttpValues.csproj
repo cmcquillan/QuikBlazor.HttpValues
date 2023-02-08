@@ -1,32 +1,36 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
-  <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Title>QuikBlazor HttpValues</Title>
-    <Description>Bind your Blazor component data directly to an Http URL.</Description>
-    <Copyright>Casey McQuillan</Copyright>
-    <PackageProjectUrl>https://github.com/cmcquillan/QuikBlazor.HttpValues</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/cmcquillan/QuikBlazor.HttpValues</RepositoryUrl>
-    <PackageTags>Balzor HttpClient AspNet </PackageTags>
-    <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
-    <FileVersion>$(VersionPrefix)</FileVersion>
-	  
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFrameworks>net6.0;net7.0</TargetFrameworks>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Title>QuikBlazor HttpValues</Title>
+		<Description>Bind your Blazor component data directly to an Http URL.</Description>
+		<Copyright>Casey McQuillan</Copyright>
+		<PackageProjectUrl>https://github.com/cmcquillan/QuikBlazor.HttpValues</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/cmcquillan/QuikBlazor.HttpValues</RepositoryUrl>
+		<PackageTags>Balzor HttpClient AspNet </PackageTags>
+		<AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
+		<FileVersion>$(VersionPrefix)</FileVersion>
 
+	</PropertyGroup>
 
-  <ItemGroup>
-    <SupportedPlatform Include="browser" />
-  </ItemGroup>
+	<ItemGroup>
+		<SupportedPlatform Include="browser" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="7.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="7.0.0" />
-  </ItemGroup>
+	<ItemGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="6.0.*" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="6.0.*" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="wwwroot\" />
-  </ItemGroup>
+	<ItemGroup Condition=" '$(TargetFramework)' == 'net7.0' ">
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="7.0.*" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="7.0.*" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="wwwroot\" />
+	</ItemGroup>
 
 </Project>

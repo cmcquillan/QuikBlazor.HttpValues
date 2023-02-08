@@ -37,14 +37,27 @@ internal class HttpDataProvider
         }
     }
 
-    internal async Task<UrlKey> FireHttpRequest<TValue>(
+    internal Task<UrlKey> FireHttpRequest<TValue>(
         RequestParameters parameters,
         IDictionary<string, object?> attributes,
-        RequestEvents<TValue> requestEvents)
+        RequestEvents requestEvents)
     {
+        return FireHttpRequest(typeof(TValue), parameters, attributes, requestEvents);
+    }
+
+
+    internal async Task<UrlKey> FireHttpRequest(
+        Type resultType,
+        RequestParameters parameters,
+        IDictionary<string, object?> attributes,
+        RequestEvents requestEvents)
+    {
+        HttpResponseMessage? response = null;
+        UrlKey? key = null;
+
         try
         {
-            (var url, var key) = await GenerateUrlKey(
+            (var url, key) = await GenerateUrlKey(
                 parameters.UrlTemplate,
                 parameters.Method,
                 parameters.RequestBody, attributes);
@@ -76,7 +89,7 @@ internal class HttpDataProvider
 
             httpData.Register(parameters.Source);
 
-            (var response, var exception) = await httpData.FireHttpRequest();
+            (response, var exception) = await httpData.FireHttpRequest();
             Task? awaitable = null;
             switch (exception)
             {
@@ -84,16 +97,15 @@ internal class HttpDataProvider
 
                     if (_intermediateCache.TryGetValue(httpData, out var cachedResult))
                     {
-                        awaitable = requestEvents.OnSuccess?.Invoke((TValue?)cachedResult, response);
+                        awaitable = requestEvents.OnSuccess?.Invoke(cachedResult, response);
                         break;
                     }
 
-                    var resultType = typeof(TValue);
                     var mapper = _responseMapperProvider.GetProvider(resultType, response);
 
                     if (mapper is not null)
                     {
-                        var result = (TValue?)await mapper.Map(resultType, response);
+                        var result = await mapper.Map(resultType, response);
                         _intermediateCache.TryAdd(httpData, result);
                         awaitable = requestEvents.OnSuccess?.Invoke(result, response);
                     }
@@ -115,6 +127,15 @@ internal class HttpDataProvider
             }
 
             return key;
+        }
+        catch (OperationCanceledException oex)
+        {
+            if (requestEvents.OnError is not null)
+            {
+                await requestEvents.OnError.Invoke(HttpValueErrorState.Timeout, oex, response);
+            }
+
+            return key!;
         }
         finally
         {

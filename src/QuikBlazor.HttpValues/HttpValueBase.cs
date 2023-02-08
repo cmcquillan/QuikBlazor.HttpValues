@@ -91,9 +91,9 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
                 HttpClientName = HttpClientName,
             };
 
-            var events = new RequestEvents<TValue>
+            var events = new RequestEvents
             {
-                OnSuccess = OnRequestSuccess,
+                OnSuccess = (val, resp) => OnRequestSuccess((TValue?)val, resp),
                 OnError = OnRequestError,
             };
 

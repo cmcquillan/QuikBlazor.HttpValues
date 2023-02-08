@@ -1,8 +1,11 @@
 ﻿namespace QuikBlazor.HttpValues.Internal;
 
-internal class RequestEvents<TValue>
-{
-    internal Func<TValue?, HttpResponseMessage, Task>? OnSuccess { get; set; }
+internal delegate Task OnSuccess(object? value, HttpResponseMessage response);
+internal delegate Task OnError(HttpValueErrorState errorState, Exception? exception, HttpResponseMessage? response);
 
-    internal Func<HttpValueErrorState, Exception?, HttpResponseMessage?, Task>? OnError { get; set; }
+internal class RequestEvents
+{
+    public OnSuccess? OnSuccess { get; set; }
+
+    public OnError? OnError { get; set; }
 }

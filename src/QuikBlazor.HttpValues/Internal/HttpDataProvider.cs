@@ -37,17 +37,7 @@ internal class HttpDataProvider
         }
     }
 
-    internal Task<UrlKey> FireHttpRequest<TValue>(
-        RequestParameters parameters,
-        IDictionary<string, object?> attributes,
-        RequestEvents requestEvents)
-    {
-        return FireHttpRequest(typeof(TValue), parameters, attributes, requestEvents);
-    }
-
-
     internal async Task<UrlKey> FireHttpRequest(
-        Type resultType,
         RequestParameters parameters,
         IDictionary<string, object?> attributes,
         RequestEvents requestEvents)
@@ -101,11 +91,11 @@ internal class HttpDataProvider
                         break;
                     }
 
-                    var mapper = _responseMapperProvider.GetProvider(resultType, response);
+                    var mapper = _responseMapperProvider.GetProvider(parameters.ResponseType, response);
 
                     if (mapper is not null)
                     {
-                        var result = await mapper.Map(resultType, response);
+                        var result = await mapper.Map(parameters.ResponseType, response);
                         _intermediateCache.TryAdd(httpData, result);
                         awaitable = requestEvents.OnSuccess?.Invoke(result, response);
                     }

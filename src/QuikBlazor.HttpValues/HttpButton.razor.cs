@@ -27,7 +27,7 @@ public partial class HttpButton<TValue> : HttpValueBase<TValue>
             StateHasChanged();
         }
 
-        await FireHttpRequest(forceFire: true);
+        await FireHttpRequest();
     }
 
     protected override async Task OnNewValueAsync(TValue? value)

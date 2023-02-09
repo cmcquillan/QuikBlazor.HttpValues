@@ -114,7 +114,6 @@ internal class HttpData
             if (_registrationValues.Count == 0 || _registrationValues.All(p => p.Empty))
             {
                 _cts?.Cancel();
-                _cts = null;
                 _responseResultSource?.TrySetCanceled();
             }
         }

@@ -147,7 +147,7 @@ internal class HttpDataProvider
         if (requestBody is null)
             return null;
 
-        var type = requestBody?.GetType();
+        var type = requestBody.GetType();
         if (type is not null && _requestMapperProvider.GetProvider(type, contentType, requestBody) is { } mapper)
         {
             return mapper.Map(type, contentType, requestBody);

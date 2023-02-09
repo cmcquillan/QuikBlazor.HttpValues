@@ -1,11 +1,15 @@
 ﻿using QuikBlazor.HttpValues.Internal;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
+using System.Collections.Concurrent;
 
 namespace QuikBlazor.HttpValues;
 
 public abstract class HttpValueComponentBase : ComponentBase
 {
+    protected const string DefaultContentType = "application/json";
+
     [Inject]
     internal ILogger<HttpValueComponentBase> Logger { get; set; } = null!;
 

@@ -6,7 +6,6 @@ namespace QuikBlazor.HttpValues;
 
 public abstract class HttpValueBase<TValue> : HttpValueComponentBase, ISignalReceiver
 {
-    private const string DefaultContentType = "application/json";
     private UrlKey _urlKey = new("", "", null);
 
     [Parameter]

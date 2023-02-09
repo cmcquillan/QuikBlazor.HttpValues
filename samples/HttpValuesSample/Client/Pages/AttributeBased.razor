@@ -1,0 +1,33 @@
+﻿@inherits HttpValueComponent
+@page "/attributes/{id}"
+
+<section>
+    <a href="/attributes/1">1</a>
+    <a href="/attributes/2">2</a>
+    <a href="/attributes/3">3</a>
+    <a href="/attributes/4">4</a>
+    <a href="/attributes/5">5</a>
+</section>
+
+<section>
+    @if (Cake is not null)
+    {
+        <div>
+            <h2>@Cake.Name</h2>
+            <strong>@Cake.Origin</strong>
+        </div>
+        <div>
+            <p>
+                @Cake.Description
+            </p>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public string? Id { get; set; }
+
+    [HttpGetResult("https://localhost:7077/cakes/{id}")]
+    public Cake? Cake { get; set; }
+}

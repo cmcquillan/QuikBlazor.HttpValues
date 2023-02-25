@@ -6,7 +6,6 @@ namespace QuikBlazor.HttpValues.Internal;
 internal class HttpDataProvider
 {
     private readonly IHttpClientProvider _httpClientProvider;
-    private readonly IClock _clock;
     private readonly ResponseMapperProvider _responseMapperProvider;
     private readonly RequestMapperProvider _requestMapperProvider;
     private readonly TemplateCache _templateCache = new();
@@ -14,12 +13,10 @@ internal class HttpDataProvider
 
     public HttpDataProvider(
         IHttpClientProvider httpClientProvider,
-        IClock clock,
         ResponseMapperProvider responseMapperProvider,
         RequestMapperProvider requestMapperProvider)
     {
         _httpClientProvider = httpClientProvider;
-        _clock = clock;
         _responseMapperProvider = responseMapperProvider;
         _requestMapperProvider = requestMapperProvider;
     }

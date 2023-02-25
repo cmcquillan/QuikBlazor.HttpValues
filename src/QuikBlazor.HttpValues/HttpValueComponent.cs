@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Components;
 using System.Reflection;
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
+using Microsoft.Extensions.Logging;
 
 namespace QuikBlazor.HttpValues;
 
@@ -9,6 +11,7 @@ public abstract class HttpValueComponent : HttpValueComponentBase
 {
     private record class HttpValueState(PropertyInfo Property, HttpGetResultAttribute Attribute, UrlKey Key);
 
+    private ImmutableDictionary<string, HttpValueState> _state = ImmutableDictionary<string, HttpValueState>.Empty;
     private readonly ConcurrentDictionary<string, HttpValueState> _cache = new();
     private Dictionary<string, object?> _parameters { get; set; } = new();
 
@@ -22,11 +25,14 @@ public abstract class HttpValueComponent : HttpValueComponentBase
                     where attr.Length > 0
                     where prop.CanWrite && !prop.PropertyType.IsPrimitive
                     select (prop, attr);
+        var state = new Dictionary<string, HttpValueState>();
 
         foreach ((var prop, var attr) in props)
         {
-            _cache.TryAdd(prop.Name, new HttpValueState(prop, attr[0], new UrlKey("", "", null)));
+            state.Add(prop.Name, new HttpValueState(prop, attr[0], new UrlKey("", "", null)));
         }
+
+        _state = ImmutableDictionary.CreateRange(state);
     }
 
     public override Task SetParametersAsync(ParameterView parameters)
@@ -36,7 +42,6 @@ public abstract class HttpValueComponent : HttpValueComponentBase
             if (!para.Cascading)
             {
                 _parameters[para.Name] = para.Value;
-                Console.WriteLine(nameof(para.Name) + ": " + para.Name);
             }
         }
 
@@ -45,9 +50,10 @@ public abstract class HttpValueComponent : HttpValueComponentBase
 
     protected override Task OnParametersSetAsync()
     {
-        foreach (var values in _cache)
+        foreach (var values in _state)
         {
-            Console.WriteLine(nameof(OnParametersSetAsync) + ": " + values.Key);
+            Logger.LogInformation("Processing parameter: {parameterName}", values.Key);
+
             var parameters = new RequestParameters
             {
                 ResponseType = values.Value.Property.PropertyType,
@@ -87,7 +93,7 @@ public abstract class HttpValueComponent : HttpValueComponentBase
         return InvokeAsync(() =>
         {
             state.Property.SetValue(this, val);
-            Console.WriteLine("Setting {0}={1}", state.Property.Name, val);
+            Logger.LogInformation("Setting {name} = {value}", state.Property.Name, val);
             StateHasChanged();
         });
     }

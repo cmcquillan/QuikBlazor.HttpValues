@@ -4,34 +4,35 @@ namespace QuikBlazor.HttpValues.Internal;
 
 internal static class UrlParser
 {
-    internal static (string, UrlKey) ResolveUrlParameters(string urlFormat, Dictionary<string, object?> attrs, Dictionary<string, object?> keyAttrs)
+    internal static (string, UrlKey) ResolveUrlParameters(string urlTemplate, Dictionary<string, object?> attrs, Dictionary<string, object?> keyAttrs)
     {
-        var key = new UrlKey("__url", urlFormat, null);
+        var key = new UrlKey("__url", urlTemplate, null);
 
         foreach (var kv in keyAttrs)
             key = key.Push(kv.Key, new UrlValue(kv.Value));
 
-        StringBuilder newUrl = new(urlFormat.Length);
+        StringBuilder newUrl = new(urlTemplate.Length);
         int paramStartIx = -1;
         int paramEndIx = -1;
         int lastParamEndIx = 0;
 
-        for (int i = 0; i < urlFormat.Length; i++)
+
+        for (int i = 0; i < urlTemplate.Length; i++)
         {
-            if (urlFormat[i] == '{')
+            if (urlTemplate[i] == '{')
             {
                 paramStartIx = i;
             }
-            else if (urlFormat[i] == '}' && paramStartIx > -1)
+            else if (urlTemplate[i] == '}' && paramStartIx > -1)
             {
                 paramEndIx = i;
             }
 
             if (paramStartIx > -1 && paramEndIx > paramStartIx)
             {
-                newUrl.Append(urlFormat.AsSpan(lastParamEndIx, paramStartIx - lastParamEndIx));
+                newUrl.Append(urlTemplate.AsSpan(lastParamEndIx, paramStartIx - lastParamEndIx));
 
-                var paramName = urlFormat.Substring(paramStartIx + 1, paramEndIx - paramStartIx - 1);
+                var paramName = urlTemplate.Substring(paramStartIx + 1, paramEndIx - paramStartIx - 1);
 
                 attrs.TryGetValue(paramName, out var paramValue);
                 newUrl.Append(paramValue);
@@ -43,9 +44,9 @@ internal static class UrlParser
             }
         }
 
-        if (urlFormat.Length > lastParamEndIx)
+        if (urlTemplate.Length > lastParamEndIx)
         {
-            newUrl.Append(urlFormat.AsSpan(lastParamEndIx, urlFormat.Length - lastParamEndIx));
+            newUrl.Append(urlTemplate.AsSpan(lastParamEndIx, urlTemplate.Length - lastParamEndIx));
         }
 
         return (newUrl.ToString(), key);

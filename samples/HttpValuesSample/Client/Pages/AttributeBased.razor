@@ -24,10 +24,22 @@
     }
 </section>
 
+<section>
+    @if (Cakes is not null)
+    {
+        <div>
+            Total Cakes: @Cakes.Count
+        </div>
+    }
+</section>
+
 @code {
     [Parameter]
     public string? Id { get; set; }
 
     [HttpGetResult("https://localhost:7077/cakes/{id}")]
     public Cake? Cake { get; set; }
+
+    [HttpGetResult("https://localhost:7077/cakes")]
+    public List<Cake>? Cakes { get; set; }
 }

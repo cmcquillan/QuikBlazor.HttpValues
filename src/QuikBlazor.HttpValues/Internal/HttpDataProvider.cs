@@ -1,4 +1,5 @@
-﻿using QuikBlazor.HttpValues.Responses;
+﻿using Microsoft.Extensions.Logging;
+using QuikBlazor.HttpValues.Responses;
 using System.Collections.Concurrent;
 
 namespace QuikBlazor.HttpValues.Internal;
@@ -8,17 +9,20 @@ internal class HttpDataProvider
     private readonly IHttpClientProvider _httpClientProvider;
     private readonly ResponseMapperProvider _responseMapperProvider;
     private readonly RequestMapperProvider _requestMapperProvider;
+    private readonly ILogger<HttpDataProvider> _logger;
     private readonly TemplateCache _templateCache = new();
     private readonly ConcurrentDictionary<HttpData, object?> _intermediateCache = new();
 
     public HttpDataProvider(
         IHttpClientProvider httpClientProvider,
         ResponseMapperProvider responseMapperProvider,
-        RequestMapperProvider requestMapperProvider)
+        RequestMapperProvider requestMapperProvider,
+        ILogger<HttpDataProvider> logger)
     {
         _httpClientProvider = httpClientProvider;
         _responseMapperProvider = responseMapperProvider;
         _requestMapperProvider = requestMapperProvider;
+        _logger = logger;
     }
 
     internal async Task CancelHttpRequest(RequestParameters parameters, IDictionary<string, object?> attributes)
@@ -71,7 +75,7 @@ internal class HttpDataProvider
                     request.Content = GetRequestBody(parameters.ContentType, parameters.RequestBody);
                 }
 
-                return new HttpData(client, request);
+                return new HttpData(client, request, _logger);
             });
 
             httpData.Register(parameters.Source);

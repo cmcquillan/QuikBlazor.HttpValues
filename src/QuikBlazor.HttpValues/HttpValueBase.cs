@@ -74,9 +74,9 @@ public abstract class HttpValueBase<TValue> : HttpValueComponentBase, ISignalRec
         _urlKey = await FireHttpRequest(parameters, events);
     }
 
-    private Task OnRequestError(HttpValueErrorState errorState, Exception? exception, HttpResponseMessage? response)
+    private async Task OnRequestError(HttpValueErrorState errorState, Exception? exception, HttpResponseMessage? response)
     {
-        return InvokeAsync(async () =>
+        await InvokeAsync(async () =>
         {
             ErrorState = errorState;
             ErrorResponse = response;
@@ -85,10 +85,10 @@ public abstract class HttpValueBase<TValue> : HttpValueComponentBase, ISignalRec
         });
     }
 
-    private Task OnRequestSuccess(object? result, HttpResponseMessage response)
+    private async Task OnRequestSuccess(object? result, HttpResponseMessage response)
     {
         var typedResult = (TValue?)result;
-        return InvokeAsync(async () =>
+        await InvokeAsync(async () =>
         {
             Result = typedResult;
             await OnNewValueAsync(typedResult);

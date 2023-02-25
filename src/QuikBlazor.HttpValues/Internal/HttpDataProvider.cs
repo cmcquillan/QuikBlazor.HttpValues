@@ -1,4 +1,5 @@
-﻿using QuikBlazor.HttpValues.Responses;
+﻿using Microsoft.Extensions.Logging;
+using QuikBlazor.HttpValues.Responses;
 using System.Collections.Concurrent;
 
 namespace QuikBlazor.HttpValues.Internal;
@@ -6,22 +7,22 @@ namespace QuikBlazor.HttpValues.Internal;
 internal class HttpDataProvider
 {
     private readonly IHttpClientProvider _httpClientProvider;
-    private readonly IClock _clock;
     private readonly ResponseMapperProvider _responseMapperProvider;
     private readonly RequestMapperProvider _requestMapperProvider;
+    private readonly ILogger<HttpDataProvider> _logger;
     private readonly TemplateCache _templateCache = new();
     private readonly ConcurrentDictionary<HttpData, object?> _intermediateCache = new();
 
     public HttpDataProvider(
         IHttpClientProvider httpClientProvider,
-        IClock clock,
         ResponseMapperProvider responseMapperProvider,
-        RequestMapperProvider requestMapperProvider)
+        RequestMapperProvider requestMapperProvider,
+        ILogger<HttpDataProvider> logger)
     {
         _httpClientProvider = httpClientProvider;
-        _clock = clock;
         _responseMapperProvider = responseMapperProvider;
         _requestMapperProvider = requestMapperProvider;
+        _logger = logger;
     }
 
     internal async Task CancelHttpRequest(RequestParameters parameters, IDictionary<string, object?> attributes)
@@ -37,17 +38,7 @@ internal class HttpDataProvider
         }
     }
 
-    internal Task<UrlKey> FireHttpRequest<TValue>(
-        RequestParameters parameters,
-        IDictionary<string, object?> attributes,
-        RequestEvents requestEvents)
-    {
-        return FireHttpRequest(typeof(TValue), parameters, attributes, requestEvents);
-    }
-
-
     internal async Task<UrlKey> FireHttpRequest(
-        Type resultType,
         RequestParameters parameters,
         IDictionary<string, object?> attributes,
         RequestEvents requestEvents)
@@ -84,7 +75,7 @@ internal class HttpDataProvider
                     request.Content = GetRequestBody(parameters.ContentType, parameters.RequestBody);
                 }
 
-                return new HttpData(client, request);
+                return new HttpData(client, request, _logger);
             });
 
             httpData.Register(parameters.Source);
@@ -101,11 +92,11 @@ internal class HttpDataProvider
                         break;
                     }
 
-                    var mapper = _responseMapperProvider.GetProvider(resultType, response);
+                    var mapper = _responseMapperProvider.GetProvider(parameters.ResponseType, response);
 
                     if (mapper is not null)
                     {
-                        var result = await mapper.Map(resultType, response);
+                        var result = await mapper.Map(parameters.ResponseType, response);
                         _intermediateCache.TryAdd(httpData, result);
                         awaitable = requestEvents.OnSuccess?.Invoke(result, response);
                     }
@@ -157,7 +148,7 @@ internal class HttpDataProvider
         if (requestBody is null)
             return null;
 
-        var type = requestBody?.GetType();
+        var type = requestBody.GetType();
         if (type is not null && _requestMapperProvider.GetProvider(type, contentType, requestBody) is { } mapper)
         {
             return mapper.Map(type, contentType, requestBody);

@@ -1,9 +1,14 @@
-﻿namespace QuikBlazor.HttpValues.Internal;
+﻿using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+
+namespace QuikBlazor.HttpValues.Internal;
 
 internal record class HttpResult(HttpResponseMessage? Response, Exception? Exception);
 
 internal class HttpData
 {
+    private readonly SemaphoreSlim _lock = new SemaphoreSlim(1);
+
     /*
      * Source that controls cancellation of the http request if all
      * objects that desire that request data have unregistered their
@@ -26,11 +31,13 @@ internal class HttpData
      */
     private readonly HttpClient _httpClient;
     private readonly HttpRequestMessage _httpRequestMessage;
+    private readonly ILogger<HttpDataProvider> _logger;
 
-    internal HttpData(HttpClient httpClient, HttpRequestMessage httpRequestMessage)
+    internal HttpData(HttpClient httpClient, HttpRequestMessage httpRequestMessage, ILogger<HttpDataProvider> logger)
     {
         _httpClient = httpClient;
         _httpRequestMessage = httpRequestMessage;
+        _logger = logger;
     }
 
     internal int ReferenceCount => _registrationValues.Sum(p => p.Count);
@@ -42,7 +49,6 @@ internal class HttpData
             return _responseResultSource.Task;
         }
 
-
         Task.Run(() => SendHttpRequest(_httpRequestMessage, _cts.Token));
 
         return _responseResultSource.Task;
@@ -50,6 +56,7 @@ internal class HttpData
 
     private bool TaskHasStarted(Task<HttpResult> task)
     {
+        _logger.LogInformation("[Check] TaskHasStarted: {status}", task.Status);
         return task.Status != TaskStatus.WaitingForActivation;
     }
 
@@ -59,8 +66,11 @@ internal class HttpData
     {
         try
         {
+            await _lock.WaitAsync();
+
             var response = await _httpClient.SendAsync(request, token);
             HttpResult? httpResult = null;
+
             if (response.IsSuccessStatusCode)
             {
                 httpResult = new HttpResult(response, null);
@@ -81,6 +91,7 @@ internal class HttpData
         }
         finally
         {
+            _lock.Release();
             request?.Dispose();
         }
     }
@@ -114,7 +125,6 @@ internal class HttpData
             if (_registrationValues.Count == 0 || _registrationValues.All(p => p.Empty))
             {
                 _cts?.Cancel();
-                _cts = null;
                 _responseResultSource?.TrySetCanceled();
             }
         }

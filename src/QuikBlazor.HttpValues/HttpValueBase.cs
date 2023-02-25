@@ -1,29 +1,18 @@
 ﻿using QuikBlazor.HttpValues.Internal;
 using Microsoft.AspNetCore.Components;
-using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 
 namespace QuikBlazor.HttpValues;
 
-public class HttpComponentBase<TValue> : HttpValueBase<TValue>
+public abstract class HttpValueBase<TValue> : HttpValueComponentBase, ISignalReceiver
 {
-    protected override Task OnNewValueAsync(TValue? value)
-    {
-        throw new NotImplementedException();
-    }
-}
-
-public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable<TValue>, ISignalReceiver
-{
-    private const string DefaultContentType = "application/json";
     private UrlKey _urlKey = new("", "", null);
-    private TaskCompletionSource<TValue?>? _awaitableTaskSource;
 
     [Parameter]
     public string? HttpClientName { get; set; }
 
     [Parameter]
-    public string? ContentType { get; set; } = HttpValueBase<TValue>.DefaultContentType;
+    public string? ContentType { get; set; } = DefaultContentType;
 
     [Parameter]
     public int? DebounceMilliseconds { get; set; }
@@ -46,79 +35,48 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
     [Inject]
     private ChangeSignalService SignalService { get; set; } = null!;
 
-    [Inject]
-    private ILogger<HttpValueBase<TValue>> Logger { get; set; } = null!;
-
-    [Inject]
-    private HttpDataProvider DataProvider { get; set; } = null!;
-
-    [Inject]
-    private Debouncer Debouncer { get; set; } = null!;
-
     public HttpValueErrorState ErrorState { get; private set; } = HttpValueErrorState.None;
 
-    protected HttpClient? Client { get; set; }
-
-    protected TValue? Result { get; set; }
-
     protected HttpResponseMessage? ErrorResponse { get; private set; }
+
+    protected TValue? Result { get; private set; }
 
     protected override void OnInitialized()
     {
         SignalService.RegisterForSignal(this);
     }
 
-    protected abstract Task OnNewValueAsync(TValue? value);
-
-    protected virtual Task OnErrorAsync(HttpValueErrorState errorState, HttpResponseMessage? httpResponse)
+    protected async Task FireHttpRequest()
     {
-        return Task.CompletedTask;
-    }
+        ArgumentNullException.ThrowIfNull(Url);
 
-    protected async Task FireHttpRequest(bool forceFire = false)
-    {
-        if (Url is not null)
+        var parameters = new RequestParameters
         {
-            CancellationTokenSource? source = null;
-            var parameters = new RequestParameters
-            {
-                Source = this,
-                PriorKey = _urlKey,
-                UrlTemplate = Url,
-                Method = Method,
-                RequestBody = RequestBody,
-                ContentType = ContentType ?? DefaultContentType,
-                HttpClientName = HttpClientName,
-            };
+            ResponseType = typeof(TValue),
+            Source = this,
+            PriorKey = _urlKey,
+            UrlTemplate = Url,
+            Method = Method,
+            RequestBody = RequestBody,
+            ContentType = ContentType ?? DefaultContentType,
+            HttpClientName = HttpClientName,
+            DebounceMilliseconds = DebounceMilliseconds,
+            TimeoutMilliseconds = TimeoutMilliseconds,
+            InputAttributes = InputAttributes,
+        };
 
-            var events = new RequestEvents
-            {
-                OnSuccess = (val, resp) => OnRequestSuccess((TValue?)val, resp),
-                OnError = OnRequestError,
-            };
+        var events = new RequestEvents
+        {
+            OnSuccess = (val, resp) => OnRequestSuccess(val, resp),
+            OnError = OnRequestError,
+        };
 
-            _urlKey = await Debouncer.Debounce(DebounceMilliseconds ?? 0, () =>
-            {
-                if (TimeoutMilliseconds.HasValue)
-                {
-                    source = new CancellationTokenSource(TimeoutMilliseconds.Value);
-                    source.Token.Register(async () =>
-                    {
-                        await DataProvider.CancelHttpRequest(parameters, InputAttributes);
-                    });
-                }
-
-                return DataProvider.FireHttpRequest<TValue>(
-                   parameters,
-                   attributes: InputAttributes,
-                   requestEvents: events);
-            }) ?? new UrlKey("", "", null);
-        }
+        _urlKey = await FireHttpRequest(parameters, events);
     }
 
-    private Task OnRequestError(HttpValueErrorState errorState, Exception? exception, HttpResponseMessage? response)
+    private async Task OnRequestError(HttpValueErrorState errorState, Exception? exception, HttpResponseMessage? response)
     {
-        return InvokeAsync(async () =>
+        await InvokeAsync(async () =>
         {
             ErrorState = errorState;
             ErrorResponse = response;
@@ -127,30 +85,22 @@ public abstract class HttpValueBase<TValue> : ComponentBase, IHttpValueAwaitable
         });
     }
 
-    private Task OnRequestSuccess(TValue? result, HttpResponseMessage response)
+    private async Task OnRequestSuccess(object? result, HttpResponseMessage response)
     {
-        return InvokeAsync(async () =>
+        var typedResult = (TValue?)result;
+        await InvokeAsync(async () =>
         {
-            Result = result;
-            await OnNewValueAsync(result);
+            Result = typedResult;
+            await OnNewValueAsync(typedResult);
             StateHasChanged();
         });
     }
 
-    public TaskAwaiter<TValue?> GetAwaiter()
-    {
-        var source = InitializeAndGetCompletionSource();
-        return source.Task.GetAwaiter();
-    }
-
-    private TaskCompletionSource<TValue?> InitializeAndGetCompletionSource()
-    {
-        return _awaitableTaskSource ??= new TaskCompletionSource<TValue?>();
-    }
+    protected abstract Task OnNewValueAsync(TValue? value);
 
     public async Task FireRequest()
     {
-        await FireHttpRequest(forceFire: true);
+        await FireHttpRequest();
     }
 
     async Task ISignalReceiver.Signal(object sender)

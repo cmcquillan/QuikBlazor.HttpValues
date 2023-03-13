@@ -6,8 +6,11 @@ namespace QuikBlazor.HttpValues;
 
 public static class DependencyInjectionExtensions
 {
-    public static IServiceCollection AddHttpValues(this IServiceCollection services)
+    public static IServiceCollection AddHttpValues(this IServiceCollection services, Action<HttpValuesConfiguration> configAction = null)
     {
+        if (configAction is not null)
+            services.Configure(configAction);
+
         services.AddSingleton<ResponseMapperProvider>();
         services.AddSingleton<IResponseMapper, JsonMapper>();
         services.AddSingleton<IResponseMapper, HtmlMapper>();

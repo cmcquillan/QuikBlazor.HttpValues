@@ -1,6 +1,7 @@
 ﻿using QuikBlazor.HttpValues.Internal;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace QuikBlazor.HttpValues;
 
@@ -35,6 +36,9 @@ public abstract class HttpValueBase<TValue> : HttpValueComponentBase, ISignalRec
     [Inject]
     private ChangeSignalService SignalService { get; set; } = null!;
 
+    [Inject]
+    private IOptions<HttpValuesConfiguration> Configuration { get; set; } = null!;
+
     public HttpValueErrorState ErrorState { get; private set; } = HttpValueErrorState.None;
 
     protected HttpResponseMessage? ErrorResponse { get; private set; }
@@ -59,7 +63,7 @@ public abstract class HttpValueBase<TValue> : HttpValueComponentBase, ISignalRec
             Method = Method,
             RequestBody = RequestBody,
             ContentType = ContentType ?? DefaultContentType,
-            HttpClientName = HttpClientName,
+            HttpClientName = HttpClientName ?? Configuration.Value.DefaultHttpClient,
             DebounceMilliseconds = DebounceMilliseconds,
             TimeoutMilliseconds = TimeoutMilliseconds,
             InputAttributes = InputAttributes,

@@ -1,0 +1,22 @@
+﻿@inherits HttpValueComponent
+@page "/attribute-basic"
+
+<section>
+    @if (Cake is not null)
+    {
+        <div>
+            <h2>@Cake.Name</h2>
+            <strong>@Cake.Origin</strong>
+        </div>
+        <div>
+            <p>
+                @Cake.Description
+            </p>
+        </div>
+    }
+</section>
+
+@code {
+    [HttpGetResult("https://localhost:7077/cakes/1")]
+    public Cake? Cake { get; set; }
+}
